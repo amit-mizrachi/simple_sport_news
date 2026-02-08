@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import List
 
-from src.interfaces.content_repository import ContentRepository
+from src.interfaces.article_store import ArticleStore
 from src.interfaces.content_source import ContentSource
 from src.interfaces.message_publisher import MessagePublisher
 from src.objects.messages.content_message import ContentMessage
@@ -17,7 +17,7 @@ class ContentPoller:
     def __init__(
         self,
         sources: List[ContentSource],
-        content_repository: ContentRepository,
+        content_repository: ArticleStore,
         message_publisher: MessagePublisher,
         content_topic: str = "content-raw",
         poll_interval: int = 300,

@@ -3,11 +3,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-
-class Entity(BaseModel):
-    name: str
-    type: str  # player, team, league, sport, venue
-    normalized: str
+from src.objects.content.article_entity import ArticleEntity
 
 
 class ProcessedArticle(BaseModel):
@@ -17,7 +13,7 @@ class ProcessedArticle(BaseModel):
     title: str
     raw_content: str
     summary: str
-    entities: List[Entity] = Field(default_factory=list)
+    entities: List[ArticleEntity] = Field(default_factory=list)
     categories: List[str] = Field(default_factory=list)
     sentiment: str = "neutral"  # positive, negative, neutral
     published_at: datetime

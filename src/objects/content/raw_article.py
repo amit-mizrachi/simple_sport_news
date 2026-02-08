@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field
 
 
-class RawContent(BaseModel):
+class RawArticle(BaseModel):
     source: str
     source_id: str
     source_url: str

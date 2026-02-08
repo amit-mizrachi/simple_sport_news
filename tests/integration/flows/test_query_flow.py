@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.objects.inference.inference_output import InferenceOutput
+from src.objects.inference.inference_result import InferenceResult
 from src.objects.requests.processed_request import ProcessedQuery
 from src.objects.enums.request_stage import RequestStage
 from src.objects.enums.request_status import RequestStatus
@@ -44,9 +44,9 @@ class TestQueryFlow:
         synthesis_response = "Manchester United have been active in the transfer window."
 
         mock_llm_provider.run_inference.side_effect = [
-            InferenceOutput(response=intent_response, model="gemini-2.0-flash",
+            InferenceResult(response=intent_response, model="gemini-2.0-flash",
                           prompt_tokens=50, completion_tokens=30, total_tokens=80, latency_ms=200),
-            InferenceOutput(response=synthesis_response, model="gemini-2.0-flash",
+            InferenceResult(response=synthesis_response, model="gemini-2.0-flash",
                           prompt_tokens=200, completion_tokens=80, total_tokens=280, latency_ms=600),
         ]
         mock_content_repository.query_articles.return_value = [

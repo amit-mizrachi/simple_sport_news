@@ -1,14 +1,8 @@
-from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 from pydantic import BaseModel
 
-
-class SourceReference(BaseModel):
-    title: str
-    source: str
-    source_url: str
-    published_at: datetime
+from src.objects.results.source_reference import SourceReference
 
 
 class QueryResult(BaseModel):

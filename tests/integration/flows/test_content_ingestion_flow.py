@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.objects.inference.inference_output import InferenceOutput
-from src.objects.content.raw_content import RawContent
+from src.objects.inference.inference_result import InferenceResult
+from src.objects.content.raw_article import RawArticle
 from src.objects.messages.content_message import ContentMessage
 from src.services.content_processor.content_processor_orchestrator import ContentProcessorOrchestrator
 
@@ -32,7 +32,7 @@ class TestContentIngestionFlow:
             "categories": ["football", "premier_league", "transfer"],
             "sentiment": "positive",
         })
-        mock_llm_provider.run_inference.return_value = InferenceOutput(
+        mock_llm_provider.run_inference.return_value = InferenceResult(
             response=llm_response, model="gemini-2.0-flash",
             prompt_tokens=100, completion_tokens=50, total_tokens=150, latency_ms=400,
         )

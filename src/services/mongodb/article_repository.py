@@ -2,12 +2,12 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from src.interfaces.content_repository import ContentRepository
+from src.interfaces.article_store import ArticleStore
 from src.objects.content.processed_article import ProcessedArticle
 from src.services.mongodb.mongodb_provider import MongoDBProvider
 
 
-class ArticleRepository(ContentRepository):
+class ArticleRepository(ArticleStore):
     """MongoDB-backed article storage and querying."""
 
     def __init__(self, provider: MongoDBProvider = None):

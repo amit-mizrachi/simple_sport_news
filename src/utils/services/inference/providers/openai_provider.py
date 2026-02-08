@@ -6,7 +6,7 @@ from openai import OpenAI
 
 from src.interfaces.llm_provider import LLMProvider
 from src.objects.inference.inference_config import InferenceConfig
-from src.objects.inference.inference_output import InferenceOutput
+from src.objects.inference.inference_result import InferenceResult
 
 DEFAULT_MAX_TOKENS = 4096
 DEFAULT_TEMPERATURE = 0.7
@@ -25,7 +25,7 @@ class OpenAIProvider(LLMProvider):
         self._client = OpenAI(api_key=api_key, base_url=base_url)
         self._api_key = api_key
 
-    def run_inference(self, prompt: str, config: InferenceConfig) -> InferenceOutput:
+    def run_inference(self, prompt: str, config: InferenceConfig) -> InferenceResult:
         messages = []
         if config.system_prompt:
             messages.append({"role": "system", "content": config.system_prompt})
@@ -43,7 +43,7 @@ class OpenAIProvider(LLMProvider):
         latency_ms = (time.time() - start_time) * 1000
 
         usage = response.usage
-        return InferenceOutput(
+        return InferenceResult(
             response=response.choices[0].message.content,
             model=response.model,
             latency_ms=latency_ms,
@@ -69,7 +69,7 @@ class OpenAIProvider(LLMProvider):
         self,
         prompt: str,
         config: Optional[InferenceConfig] = None
-    ) -> InferenceOutput:
+    ) -> InferenceResult:
         if config is None:
             config = InferenceConfig(
                 model=DEFAULT_MODEL,

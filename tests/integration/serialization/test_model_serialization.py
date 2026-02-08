@@ -4,21 +4,24 @@ from datetime import datetime, timezone
 
 import pytest
 
-from src.objects.content.raw_content import RawContent
-from src.objects.content.processed_article import ProcessedArticle, Entity
+from src.objects.content.raw_article import RawArticle
+from src.objects.content.article_entity import ArticleEntity
+from src.objects.content.processed_article import ProcessedArticle
 from src.objects.requests.processed_request import ProcessedQuery
 from src.objects.enums.request_stage import RequestStage
 from src.objects.messages.content_message import ContentMessage
 from src.objects.messages.query_message import QueryMessage
-from src.objects.requests.query_request import QueryRequest, QueryFilters
-from src.objects.results.query_result import QueryResult, SourceReference
+from src.objects.requests.query_filters import QueryFilters
+from src.objects.requests.query_request import QueryRequest
+from src.objects.results.query_result import QueryResult
+from src.objects.results.source_reference import SourceReference
 
 
 class TestModelSerializationRoundTrips:
     def test_raw_content_json_roundtrip(self, sample_raw_content):
         json_str = sample_raw_content.model_dump_json()
         data = json.loads(json_str)
-        restored = RawContent.model_validate(data)
+        restored = RawArticle.model_validate(data)
         assert restored == sample_raw_content
 
     def test_processed_article_json_roundtrip(self, sample_processed_article):

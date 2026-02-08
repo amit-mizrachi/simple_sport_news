@@ -7,7 +7,7 @@ from google.genai import types
 
 from src.interfaces.llm_provider import LLMProvider
 from src.objects.inference.inference_config import InferenceConfig
-from src.objects.inference.inference_output import InferenceOutput
+from src.objects.inference.inference_result import InferenceResult
 
 
 class GoogleProvider(LLMProvider):
@@ -17,7 +17,7 @@ class GoogleProvider(LLMProvider):
         self._client = genai.Client(api_key=api_key)
         self._api_key = api_key
 
-    def run_inference(self, prompt: str, config: InferenceConfig) -> InferenceOutput:
+    def run_inference(self, prompt: str, config: InferenceConfig) -> InferenceResult:
         gen_config = types.GenerateContentConfig(
             max_output_tokens=config.max_tokens or 4096,
             temperature=config.temperature,
@@ -37,7 +37,7 @@ class GoogleProvider(LLMProvider):
         latency_ms = (time.time() - start_time) * 1000
 
         usage_metadata = response.usage_metadata
-        return InferenceOutput(
+        return InferenceResult(
             response=response.text,
             model=config.model,
             latency_ms=latency_ms,
@@ -59,7 +59,7 @@ class GoogleProvider(LLMProvider):
         system_prompt: Optional[str] = None,
         max_tokens: int = 4096,
         temperature: float = 0.7
-    ) -> InferenceOutput:
+    ) -> InferenceResult:
         config = InferenceConfig(
             model=model,
             temperature=temperature,

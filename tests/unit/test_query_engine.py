@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
-from src.objects.inference.inference_output import InferenceOutput
+from src.objects.inference.inference_result import InferenceResult
 from src.objects.enums.request_stage import RequestStage
 from src.services.query_engine.query_engine_orchestrator import QueryEngineOrchestrator
 
@@ -33,9 +33,9 @@ class TestQueryEngineOrchestrator:
         synthesis_response = "Manchester United have made several transfer moves recently."
 
         mock_llm_provider.run_inference.side_effect = [
-            InferenceOutput(response=intent_response, model="gemini-2.0-flash",
+            InferenceResult(response=intent_response, model="gemini-2.0-flash",
                           prompt_tokens=50, completion_tokens=30, total_tokens=80, latency_ms=300),
-            InferenceOutput(response=synthesis_response, model="gemini-2.0-flash",
+            InferenceResult(response=synthesis_response, model="gemini-2.0-flash",
                           prompt_tokens=200, completion_tokens=100, total_tokens=300, latency_ms=800),
         ]
 
@@ -96,7 +96,7 @@ class TestQueryEngineOrchestrator:
         })
 
         mock_llm_provider.run_inference.side_effect = [
-            InferenceOutput(response=intent_response, model="gemini-2.0-flash",
+            InferenceResult(response=intent_response, model="gemini-2.0-flash",
                           prompt_tokens=50, completion_tokens=30, total_tokens=80, latency_ms=300),
         ]
 

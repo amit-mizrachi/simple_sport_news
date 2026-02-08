@@ -4,16 +4,19 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.interfaces.content_repository import ContentRepository
+from src.interfaces.article_store import ArticleStore
 from src.interfaces.llm_provider import LLMProvider
 from src.objects.inference.inference_config import InferenceConfig
-from src.objects.inference.inference_output import InferenceOutput
+from src.objects.inference.inference_result import InferenceResult
 from src.interfaces.message_publisher import MessagePublisher
 from src.interfaces.state_repository import StateRepository
-from src.objects.content.raw_content import RawContent
-from src.objects.content.processed_article import ProcessedArticle, Entity
-from src.objects.requests.query_request import QueryRequest, QueryFilters
-from src.objects.results.query_result import QueryResult, SourceReference
+from src.objects.content.raw_article import RawArticle
+from src.objects.content.article_entity import ArticleEntity
+from src.objects.content.processed_article import ProcessedArticle
+from src.objects.requests.query_filters import QueryFilters
+from src.objects.requests.query_request import QueryRequest
+from src.objects.results.query_result import QueryResult
+from src.objects.results.source_reference import SourceReference
 
 
 @pytest.fixture(autouse=True)
@@ -34,7 +37,7 @@ def mock_logger():
 
 @pytest.fixture
 def sample_raw_content():
-    return RawContent(
+    return RawArticle(
         source="reddit",
         source_id="abc123",
         source_url="https://reddit.com/r/soccer/comments/abc123",
@@ -55,9 +58,9 @@ def sample_processed_article():
         raw_content="Manchester United have completed the signing of a new striker from Serie A.",
         summary="Manchester United completed a new striker signing from an Italian club.",
         entities=[
-            Entity(name="Manchester United", type="team", normalized="manchester_united"),
-            Entity(name="Premier League", type="league", normalized="premier_league"),
-            Entity(name="Football", type="sport", normalized="football"),
+            ArticleEntity(name="Manchester United", type="team", normalized="manchester_united"),
+            ArticleEntity(name="Premier League", type="league", normalized="premier_league"),
+            ArticleEntity(name="Football", type="sport", normalized="football"),
         ],
         categories=["transfer"],
         sentiment="positive",
@@ -107,7 +110,7 @@ def mock_state_repository():
 
 @pytest.fixture
 def mock_content_repository():
-    mock = MagicMock(spec=ContentRepository)
+    mock = MagicMock(spec=ArticleStore)
     mock.store_article.return_value = {}
     mock.article_exists.return_value = False
     mock.query_articles.return_value = []
@@ -126,7 +129,7 @@ def mock_message_publisher():
 @pytest.fixture
 def mock_llm_provider():
     mock_provider = MagicMock(spec=LLMProvider)
-    mock_provider.run_inference.return_value = InferenceOutput(
+    mock_provider.run_inference.return_value = InferenceResult(
         response='{"summary": "Test summary", "entities": [], "categories": ["test"], "sentiment": "neutral"}',
         model="gemini-2.0-flash",
         prompt_tokens=100,

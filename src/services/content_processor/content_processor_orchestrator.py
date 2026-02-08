@@ -3,11 +3,12 @@ import json
 import time
 from datetime import datetime, timezone
 
-from src.interfaces.content_repository import ContentRepository
+from src.interfaces.article_store import ArticleStore
 from src.interfaces.llm_provider import LLMProvider
 from src.interfaces.message_handler import MessageHandler
 from src.objects.inference.inference_config import InferenceConfig
-from src.objects.content.processed_article import ProcessedArticle, Entity
+from src.objects.content.article_entity import ArticleEntity
+from src.objects.content.processed_article import ProcessedArticle
 from src.objects.messages.content_message import ContentMessage
 from src.utils.observability.logs.logger import Logger
 
@@ -43,7 +44,7 @@ class ContentProcessorOrchestrator(MessageHandler):
 
     def __init__(
         self,
-        content_repository: ContentRepository,
+        content_repository: ArticleStore,
         llm_provider: LLMProvider,
         model: str,
     ):
@@ -74,7 +75,7 @@ class ContentProcessorOrchestrator(MessageHandler):
             enrichment = json.loads(output.response)
 
             entities = [
-                Entity(
+                ArticleEntity(
                     name=e.get("name", ""),
                     type=e.get("type", ""),
                     normalized=e.get("normalized", e.get("name", "").lower().replace(" ", "_"))

@@ -7,7 +7,7 @@ from src.interfaces.message_publisher import MessagePublisher
 from src.interfaces.message_consumer import AsyncMessageConsumer
 from src.interfaces.llm_provider import LLMProvider
 from src.interfaces.inference_provider_config import InferenceProviderConfig
-from src.interfaces.content_repository import ContentRepository
+from src.interfaces.article_store import ArticleStore
 from src.interfaces.content_source import ContentSource
 from src.interfaces.message_handler import MessageHandler
 from src.interfaces.message_dispatcher import MessageDispatcher
@@ -18,7 +18,7 @@ __all__ = [
     "AsyncMessageConsumer",
     "LLMProvider",
     "InferenceProviderConfig",
-    "ContentRepository",
+    "ArticleStore",
     "ContentSource",
     "MessageHandler",
     "MessageDispatcher",

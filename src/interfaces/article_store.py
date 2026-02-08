@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from src.objects.content.processed_article import ProcessedArticle
 
 
-class ContentRepository(ABC):
+class ArticleStore(ABC):
     """Interface for storing and querying processed articles."""
 
     @abstractmethod

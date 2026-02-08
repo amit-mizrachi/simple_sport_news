@@ -5,7 +5,7 @@ from typing import List, Optional
 import praw
 
 from src.interfaces.content_source import ContentSource
-from src.objects.content.raw_content import RawContent
+from src.objects.content.raw_article import RawArticle
 
 
 class RedditSource(ContentSource):
@@ -25,8 +25,8 @@ class RedditSource(ContentSource):
         )
         self._subreddits = subreddits or ["soccer", "nba", "nfl", "formula1"]
 
-    def fetch_latest(self, since: Optional[datetime] = None) -> List[RawContent]:
-        results: List[RawContent] = []
+    def fetch_latest(self, since: Optional[datetime] = None) -> List[RawArticle]:
+        results: List[RawArticle] = []
         for sub_name in self._subreddits:
             try:
                 subreddit = self._reddit.subreddit(sub_name)
@@ -36,7 +36,7 @@ class RedditSource(ContentSource):
                         continue
 
                     content = submission.selftext or submission.url
-                    results.append(RawContent(
+                    results.append(RawArticle(
                         source="reddit",
                         source_id=submission.id,
                         source_url=f"https://reddit.com{submission.permalink}",

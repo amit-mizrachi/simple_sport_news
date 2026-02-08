@@ -3,14 +3,15 @@ import json
 import time
 from datetime import datetime, timezone
 
-from src.interfaces.content_repository import ContentRepository
+from src.interfaces.article_store import ArticleStore
 from src.interfaces.llm_provider import LLMProvider
 from src.interfaces.message_handler import MessageHandler
 from src.objects.inference.inference_config import InferenceConfig
 from src.interfaces.state_repository import StateRepository
 from src.objects.enums.request_stage import RequestStage
 from src.objects.messages.query_message import QueryMessage
-from src.objects.results.query_result import QueryResult, SourceReference
+from src.objects.results.query_result import QueryResult
+from src.objects.results.source_reference import SourceReference
 from src.utils.observability.logs.logger import Logger
 
 INTENT_PROMPT = """Parse this sports query and return a JSON object with:
@@ -46,7 +47,7 @@ class QueryEngineOrchestrator(MessageHandler):
     def __init__(
         self,
         state_repository: StateRepository,
-        content_repository: ContentRepository,
+        content_repository: ArticleStore,
         llm_provider: LLMProvider,
         model: str,
     ):

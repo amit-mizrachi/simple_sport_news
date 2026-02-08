@@ -1,28 +1,31 @@
 """Tests for all new Pydantic models serialization."""
 from datetime import datetime, timezone
 
-from src.objects.content.raw_content import RawContent
-from src.objects.content.processed_article import ProcessedArticle, Entity
+from src.objects.content.raw_article import RawArticle
+from src.objects.content.article_entity import ArticleEntity
+from src.objects.content.processed_article import ProcessedArticle
 from src.objects.requests.processed_request import ProcessedQuery
 from src.objects.enums.request_stage import RequestStage
 from src.objects.messages.content_message import ContentMessage
 from src.objects.messages.query_message import QueryMessage
-from src.objects.requests.query_request import QueryRequest, QueryFilters
+from src.objects.requests.query_filters import QueryFilters
+from src.objects.requests.query_request import QueryRequest
 from src.objects.responses.query_response import QueryResponse
 from src.objects.enums.request_status import RequestStatus
-from src.objects.results.query_result import QueryResult, SourceReference
+from src.objects.results.query_result import QueryResult
+from src.objects.results.source_reference import SourceReference
 
 
-class TestRawContent:
+class TestRawArticle:
     def test_serialization_roundtrip(self, sample_raw_content):
         json_str = sample_raw_content.model_dump_json()
-        restored = RawContent.model_validate_json(json_str)
+        restored = RawArticle.model_validate_json(json_str)
         assert restored.source == "reddit"
         assert restored.source_id == "abc123"
         assert restored.title == "Manchester United signs new striker"
 
     def test_metadata_default(self):
-        rc = RawContent(
+        rc = RawArticle(
             source="espn", source_id="x", source_url="http://espn.com",
             title="Test", content="Test content",
             published_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
@@ -40,7 +43,7 @@ class TestProcessedArticle:
         assert "transfer" in restored.categories
 
     def test_entity_model(self):
-        entity = Entity(name="Cristiano Ronaldo", type="player", normalized="cristiano_ronaldo")
+        entity = ArticleEntity(name="Cristiano Ronaldo", type="player", normalized="cristiano_ronaldo")
         data = entity.model_dump()
         assert data["type"] == "player"
 

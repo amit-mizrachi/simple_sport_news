@@ -4,12 +4,12 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from src.interfaces.content_repository import ContentRepository
+from src.interfaces.article_store import ArticleStore
 from src.objects.content.processed_article import ProcessedArticle
 from src.utils.services.aws.appconfig_service import get_config_service
 
 
-class MongoDBClient(ContentRepository):
+class MongoDBClient(ArticleStore):
     """HTTP client wrapping the MongoDB service REST API."""
 
     def __init__(self):

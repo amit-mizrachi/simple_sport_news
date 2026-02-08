@@ -4,7 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.objects.content.processed_article import ProcessedArticle, Entity
+from src.objects.content.article_entity import ArticleEntity
+from src.objects.content.processed_article import ProcessedArticle
 from src.services.mongodb.article_repository import ArticleRepository
 
 

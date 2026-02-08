@@ -6,7 +6,7 @@ from hashlib import sha256
 import feedparser
 
 from src.interfaces.content_source import ContentSource
-from src.objects.content.raw_content import RawContent
+from src.objects.content.raw_article import RawArticle
 
 
 class RSSSource(ContentSource):
@@ -16,8 +16,8 @@ class RSSSource(ContentSource):
         self._source_name = source_name
         self._feed_urls = feed_urls
 
-    def fetch_latest(self, since: Optional[datetime] = None) -> List[RawContent]:
-        results: List[RawContent] = []
+    def fetch_latest(self, since: Optional[datetime] = None) -> List[RawArticle]:
+        results: List[RawArticle] = []
 
         for feed_url in self._feed_urls:
             try:
@@ -32,7 +32,7 @@ class RSSSource(ContentSource):
                     ).hexdigest()[:16]
 
                     content = entry.get("summary", "") or entry.get("description", "")
-                    results.append(RawContent(
+                    results.append(RawArticle(
                         source=self._source_name,
                         source_id=source_id,
                         source_url=entry.get("link", ""),
