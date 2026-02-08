@@ -1,0 +1,15 @@
+apiVersion: v2
+name: contentpulse-service
+description: Generic Helm chart for ContentPulse microservices
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: ContentPulse Team
+    email: team@example.com
+keywords:
+  - contentpulse
+  - sports
+  - content-aggregation
+  - microservices
+  - fastapi

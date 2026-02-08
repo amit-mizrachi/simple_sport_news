@@ -7,6 +7,8 @@ from typing import Optional
 from src.utils.services.aws.appconfig_service import get_config_service
 from src.utils.services.aws.sqs_service import get_sqs_service
 from src.utils.observability.logs.logger import Logger
+from src.utils.observability.traces.spans.span_context_factory import SpanContextFactory
+from src.utils.observability.traces.spans.spanner import Spanner
 from src.interfaces.message_dispatcher import MessageDispatcher
 from src.utils.queue.sqs.sqs_visibility_extender import SQSVisibilityExtender
 
@@ -32,6 +34,7 @@ class SQSMessageProcessor:
         self.__message_handler = message_handler
         self.__queue_url = self.__appconfig.get(queue_config_key)
 
+        self.__spanner = Spanner()
         self.__semaphore = BoundedSemaphore(message_handler.max_worker_count)
         self.__event_loop: Optional[asyncio.AbstractEventLoop] = None
         self.__closed = False
@@ -63,7 +66,11 @@ class SQSMessageProcessor:
 
             self.__visibility_extender.register_message(message_id, receipt_handle)
 
-            message_result = self.__message_handler.submit(message_contents)
+            telemetry_headers = message_contents.get("telemetry_headers", {})
+            telemetry_context = self.__spanner.extract_telemetry_context(telemetry_headers)
+
+            with SpanContextFactory.consumer(self.__queue_url, message_id, message_contents, telemetry_context=telemetry_context):
+                message_result = self.__message_handler.submit(message_contents)
             return message_result
         except MessageAlreadyProcessingError:
             self.__logger.warning(f"Message {message_id} is already being processed")

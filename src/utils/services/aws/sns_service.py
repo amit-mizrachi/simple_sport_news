@@ -5,6 +5,7 @@ import boto3
 
 from src.interfaces.message_publisher import MessagePublisher
 from src.utils.observability.logs.logger import Logger
+from src.utils.observability.traces.spans.span_context_factory import SpanContextFactory
 from src.utils.services.aws.appconfig_service import get_config_service
 
 
@@ -26,16 +27,17 @@ class SNSService(MessagePublisher):
     def publish(self, topic_name: str, message: str) -> bool:
         topic_arn = self._topic_map.get(topic_name, topic_name)
         try:
-            publish_args = {
-                "TopicArn": topic_arn,
-                "Message": message,
-            }
+            with SpanContextFactory.client("SNS", self._sns_client, "sns_service", "publish"):
+                publish_args = {
+                    "TopicArn": topic_arn,
+                    "Message": message,
+                }
 
-            response = self._sns_client.publish(**publish_args)
+                response = self._sns_client.publish(**publish_args)
 
-            status_code = response.get("ResponseMetadata", {}).get("HTTPStatusCode", 0)
-            if status_code != 200:
-                raise Exception(f"SNS publish failed with status {status_code}")
+                status_code = response.get("ResponseMetadata", {}).get("HTTPStatusCode", 0)
+                if status_code != 200:
+                    raise Exception(f"SNS publish failed with status {status_code}")
 
             self._logger.info(f"Published message to {topic_arn}")
             return True

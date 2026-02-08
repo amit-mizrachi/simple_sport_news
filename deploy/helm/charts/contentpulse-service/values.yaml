@@ -1,0 +1,181 @@
+# ========================================================================
+# DEFAULT VALUES FOR CONTENTPULSE MICROSERVICES
+# ========================================================================
+# IMPORTANT: Configuration values come from Terraform-managed ConfigMaps
+# (infra-config). This file only contains Helm-specific settings.
+#
+# Deploy: helm install <name> ./charts/contentpulse-service -f releases/<service>-values.yaml
+# ========================================================================
+
+# Service configuration
+service:
+  name: ""           # REQUIRED: Set in release values (e.g., "gateway-service")
+  type: ClusterIP
+  containerPort: 8000  # REQUIRED: Set in release values to match ConfigMap port
+  portKey: PORT_GATEWAY  # REQUIRED: ConfigMap key for SERVICE_PORT env var
+
+# Deployment configuration
+replicaCount: 2
+
+# Image configuration
+image:
+  repository: ""  # Optional: defaults to ECR_REPOSITORY_PREFIX/service.name
+  tag: ""         # Optional: defaults to ECR_IMAGE_TAG from ConfigMap
+  pullPolicy: Always
+
+# Entrypoint override for single-image multi-service pattern
+command: []
+args: []
+
+# For default image building from ConfigMap values
+infraConfig:
+  ecrRepositoryPrefix: ""
+  ecrImageTag: ""
+
+# AppConfig bootstrap IDs (set from Terraform outputs)
+appConfig:
+  applicationId: ""
+  environmentId: ""
+  profileId: ""
+
+# Enable SQS worker config loading (for consumer services)
+sqsWorker: false
+
+# Inference mode ("remote" or "local") — injected as INFERENCE_MODE env var
+inferenceMode: ""
+
+# KEDA autoscaling (for scale-to-zero GPU pods)
+keda:
+  enabled: false
+  pollingInterval: 30
+  cooldownPeriod: 1800
+  minReplicas: 0
+  maxReplicas: 1
+  triggers: []
+  # Example Kafka trigger:
+  # - type: kafka
+  #   metadata:
+  #     bootstrapServers: "kafka-bootstrap:9092"
+  #     consumerGroup: "content-processor-group"
+  #     topic: "content-processing"
+  #     lagThreshold: "5"
+
+# Service Account (for IRSA)
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""  # Defaults to service.name
+
+# Resource limits
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Autoscaling (HPA — disabled when KEDA is enabled)
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Health checks
+livenessProbe:
+  initialDelaySeconds: 30
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 10
+  failureThreshold: 3
+
+# Environment variables (additional to ConfigMap)
+env: []
+
+# Environment variables from secrets/configmaps (additional)
+envFrom: []
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Node selection
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Topology Spread Constraints (for HA across AZs)
+topologySpreadConstraints: []
+
+# Affinity
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - "{{ .Values.service.name }}"
+          topologyKey: kubernetes.io/hostname
+
+# Ingress (for gateway service only)
+ingress:
+  enabled: false
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+  hosts:
+    - host: ""
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Labels
+labels: {}
+
+# Network Policy
+networkPolicy:
+  enabled: false
+  ingress: []
+  egress: []
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# External Secrets (for pulling secrets from AWS Secrets Manager)
+externalSecret:
+  enabled: false
+  refreshInterval: "1h"
+  secretStoreRef: "aws-secrets-manager"
+  # Data mappings from AWS Secrets Manager to K8s Secret
+  # Example for MongoDB credentials:
+  # data:
+  #   - secretKey: MONGODB_URI
+  #     remoteKey: dev/contentpulse/mongodb/credentials
+  #     property: connection_string
+  data: []

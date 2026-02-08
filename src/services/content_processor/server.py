@@ -4,6 +4,7 @@ import signal
 
 from src.services.content_processor.content_processor_orchestrator import ContentProcessorOrchestrator
 from src.utils.observability.logs.logger import Logger
+from src.utils.observability.traces.tracer import Tracer
 from src.utils.queue.messaging_factory import get_message_consumer
 from src.utils.queue.thread_pool_message_dispatcher import ThreadPoolMessageDispatcher
 from src.utils.services.aws.appconfig_service import get_config_service
@@ -13,6 +14,7 @@ from src.utils.services.config.ports import get_service_port
 from src.utils.services.inference.provider_config_builder import build_provider_config
 
 logger = Logger()
+tracer = Tracer()
 
 SERVICE_PORT_KEY = "services.content_processor.port"
 DEFAULT_PORT = 8003
@@ -47,6 +49,8 @@ async def main():
 
     def signal_handler():
         logger.info("Received shutdown signal")
+        tracer.shutdown()
+        logger.flush()
         health_task.cancel()
         asyncio.create_task(consumer.close())
 

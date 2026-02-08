@@ -5,6 +5,7 @@ from confluent_kafka import Producer, KafkaError
 
 from src.interfaces.message_publisher import MessagePublisher
 from src.utils.observability.logs.logger import Logger
+from src.utils.observability.traces.spans.span_context_factory import SpanContextFactory
 from src.utils.services.aws.appconfig_service import get_config_service
 
 
@@ -31,10 +32,11 @@ class KafkaPublisher(MessagePublisher):
     def publish(self, topic_name: str, message: str) -> bool:
         kafka_topic = self._topic_map.get(topic_name, topic_name)
         try:
-            self._producer.produce(kafka_topic, value=message.encode("utf-8"))
-            remaining = self._producer.flush(timeout=10)
-            if remaining > 0:
-                raise Exception(f"Kafka flush timed out with {remaining} messages pending")
+            with SpanContextFactory.client("KAFKA", self._producer, "kafka_producer", "produce"):
+                self._producer.produce(kafka_topic, value=message.encode("utf-8"))
+                remaining = self._producer.flush(timeout=10)
+                if remaining > 0:
+                    raise Exception(f"Kafka flush timed out with {remaining} messages pending")
 
             self._logger.info(f"Published message to Kafka topic {kafka_topic}")
             return True

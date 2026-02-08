@@ -1,10 +1,12 @@
 """Gateway Service - REST API for query submission and status retrieval."""
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 
 from src.services.gateway.query_submission_service import QuerySubmissionService
 from src.objects.requests.query_request import QueryRequest
 from src.utils.observability.logs.logger import Logger
+from src.utils.observability.traces.spans.span_context_factory import SpanContextFactory
+from src.utils.observability.traces.spans.spanner import Spanner
 from src.utils.queue.messaging_factory import get_message_publisher
 from src.utils.services.aws.appconfig_service import get_config_service
 from src.utils.services.clients.redis_client import get_state_repository
@@ -12,6 +14,7 @@ from src.utils.services.config.ports import get_service_port
 
 app = FastAPI(title="ContentPulse Gateway")
 logger = Logger()
+spanner = Spanner()
 
 SERVICE_PORT_KEY = "services.gateway.port"
 
@@ -29,22 +32,26 @@ query_service = create_query_service()
 
 
 @app.post("/query")
-async def submit_query(query_request: QueryRequest):
-    logger.info("Submitting query")
-    response = query_service.submit_query(query_request)
-    logger.info(f"Successfully submitted query {response.request_id}")
-    return response
+async def submit_query(query_request: QueryRequest, request: Request):
+    telemetry_context = spanner.extract_telemetry_context(dict(request.headers))
+    with SpanContextFactory.server("POST", "/query", telemetry_context=telemetry_context):
+        logger.info("Submitting query")
+        response = query_service.submit_query(query_request)
+        logger.info(f"Successfully submitted query {response.request_id}")
+        return response
 
 
 @app.get("/query/{request_id}")
-async def get_query_status(request_id: str):
-    logger.info(f"Getting query status for {request_id}")
-    try:
-        result = query_service.get_query_status(request_id)
-        logger.info(f"Successfully got status for {request_id}")
-        return result
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+async def get_query_status(request_id: str, request: Request):
+    telemetry_context = spanner.extract_telemetry_context(dict(request.headers))
+    with SpanContextFactory.server("GET", "/query/{request_id}", telemetry_context=telemetry_context):
+        logger.info(f"Getting query status for {request_id}")
+        try:
+            result = query_service.get_query_status(request_id)
+            logger.info(f"Successfully got status for {request_id}")
+            return result
+        except KeyError as e:
+            raise HTTPException(status_code=404, detail=str(e))
 
 
 @app.get("/health")

@@ -13,6 +13,7 @@ from src.objects.messages.query_message import QueryMessage
 from src.objects.results.query_result import QueryResult
 from src.objects.results.source_reference import SourceReference
 from src.utils.observability.logs.logger import Logger
+from src.utils.observability.traces.spans.span_context_factory import SpanContextFactory
 
 INTENT_PROMPT = """Parse this sports query and return a JSON object with:
 - "entities": Array of normalized entity strings to search (e.g. ["manchester_united", "cristiano_ronaldo"])
@@ -58,8 +59,9 @@ class QueryEngineOrchestrator(MessageHandler):
         self._model = model
 
     def handle(self, raw_message, *args, **kwargs) -> bool:
-        query_message = QueryMessage.model_validate(raw_message)
-        return self._orchestrate_query(query_message)
+        with SpanContextFactory.internal("query_engine", "orchestrate"):
+            query_message = QueryMessage.model_validate(raw_message)
+            return self._orchestrate_query(query_message)
 
     def _orchestrate_query(self, message: QueryMessage) -> bool:
         request_id = message.request_id
@@ -97,10 +99,11 @@ class QueryEngineOrchestrator(MessageHandler):
                 latency_ms=latency_ms,
             )
 
-            self._state_repository.update(request_id, {
-                "query_result": query_result.model_dump(mode="json"),
-                "stage": RequestStage.Completed.value,
-            })
+            with SpanContextFactory.client("REDIS", self._state_repository, "query_engine", "save_result"):
+                self._state_repository.update(request_id, {
+                    "query_result": query_result.model_dump(mode="json"),
+                    "stage": RequestStage.Completed.value,
+                })
 
             self._logger.info(f"Query {request_id} completed in {latency_ms:.0f}ms")
             return True
@@ -110,62 +113,67 @@ class QueryEngineOrchestrator(MessageHandler):
             return False
 
     def _parse_intent(self, query: str) -> dict:
-        prompt = INTENT_PROMPT.format(query=query)
-        config = InferenceConfig(model=self._model, temperature=0.2)
-        output = self._llm_provider.run_inference(prompt=prompt, config=config)
-        return json.loads(output.response)
+        with SpanContextFactory.client("LLM", self._llm_provider, "query_engine", "parse_intent"):
+            prompt = INTENT_PROMPT.format(query=query)
+            config = InferenceConfig(model=self._model, temperature=0.2)
+            output = self._llm_provider.run_inference(prompt=prompt, config=config)
+            return json.loads(output.response)
 
     def _retrieve_articles(self, intent: dict, message: QueryMessage) -> list:
-        articles = []
+        with SpanContextFactory.client("MONGODB", self._content_repository, "query_engine", "retrieve_articles"):
+            articles = []
 
-        # Try structured query first
-        entities = intent.get("entities", [])
-        categories = intent.get("categories", [])
-        entity_type = intent.get("entity_type")
+            # Try structured query first
+            entities = intent.get("entities", [])
+            categories = intent.get("categories", [])
+            entity_type = intent.get("entity_type")
 
-        filters = message.query_request.filters
-        sources = filters.sources if filters and filters.sources else None
-        date_from = filters.date_from.isoformat() if filters and filters.date_from else None
-        date_to = filters.date_to.isoformat() if filters and filters.date_to else None
+            filters = message.query_request.filters
+            sources = filters.sources if filters and filters.sources else None
+            date_from = filters.date_from.isoformat() if filters and filters.date_from else None
+            date_to = filters.date_to.isoformat() if filters and filters.date_to else None
 
-        if entities or categories or entity_type:
-            articles = self._content_repository.query_articles(
-                entities=entities or None,
-                categories=categories or None,
-                sources=sources,
-                date_from=date_from,
-                date_to=date_to,
-                entity_type=entity_type,
-                limit=20,
-            )
+            if entities or categories or entity_type:
+                articles = self._content_repository.query_articles(
+                    entities=entities or None,
+                    categories=categories or None,
+                    sources=sources,
+                    date_from=date_from,
+                    date_to=date_to,
+                    entity_type=entity_type,
+                    limit=20,
+                )
 
-        # Fall back to text search if no structured results
-        if not articles:
-            search_terms = intent.get("search_terms", message.query_request.query)
-            articles = self._content_repository.search_articles(search_terms, limit=20)
+            # Fall back to text search if no structured results
+            if not articles:
+                search_terms = intent.get("search_terms", message.query_request.query)
+                articles = self._content_repository.search_articles(search_terms, limit=20)
 
-        return articles
+            return articles
 
     def _synthesize_answer(self, query: str, articles: list) -> str:
-        if not articles:
-            return "I couldn't find any relevant articles to answer your question."
+        with SpanContextFactory.client("LLM", self._llm_provider, "query_engine", "synthesize_answer"):
+            if not articles:
+                return "I couldn't find any relevant articles to answer your question."
 
-        articles_text = "\n\n".join(
-            f"Title: {a.get('title', 'N/A')}\nSource: {a.get('source', 'N/A')}\nSummary: {a.get('summary', a.get('raw_content', '')[:500])}"
-            for a in articles[:10]
-        )
+            articles_text = "\n\n".join(
+                f"Title: {a.get('title', 'N/A')}\nSource: {a.get('source', 'N/A')}\nSummary: {a.get('summary', a.get('raw_content', '')[:500])}"
+                for a in articles[:10]
+            )
 
-        prompt = SYNTHESIS_PROMPT.format(query=query, articles=articles_text)
-        config = InferenceConfig(model=self._model, temperature=0.5)
-        output = self._llm_provider.run_inference(prompt=prompt, config=config)
-        return output.response
+            prompt = SYNTHESIS_PROMPT.format(query=query, articles=articles_text)
+            config = InferenceConfig(model=self._model, temperature=0.5)
+            output = self._llm_provider.run_inference(prompt=prompt, config=config)
+            return output.response
 
     def _update_stage(self, request_id: str, stage: RequestStage):
-        self._state_repository.update(request_id, {"stage": stage.value})
+        with SpanContextFactory.client("REDIS", self._state_repository, "query_engine", "update_stage"):
+            self._state_repository.update(request_id, {"stage": stage.value})
 
     def _handle_failure(self, request_id: str, error: Exception):
         self._logger.error(f"Query failed for {request_id}: {error}")
-        self._state_repository.update(request_id, {
-            "stage": RequestStage.Failed.value,
-            "error_message": str(error),
-        })
+        with SpanContextFactory.client("REDIS", self._state_repository, "query_engine", "update_failure"):
+            self._state_repository.update(request_id, {
+                "stage": RequestStage.Failed.value,
+                "error_message": str(error),
+            })

@@ -11,6 +11,7 @@ from src.objects.content.article_entity import ArticleEntity
 from src.objects.content.processed_article import ProcessedArticle
 from src.objects.messages.content_message import ContentMessage
 from src.utils.observability.logs.logger import Logger
+from src.utils.observability.traces.spans.span_context_factory import SpanContextFactory
 
 PROCESSING_PROMPT = """Analyze this sports article and return a JSON object with:
 - "summary": A 2-3 sentence summary
@@ -54,12 +55,13 @@ class ContentProcessorOrchestrator(MessageHandler):
         self._model = model
 
     def handle(self, raw_message, *args, **kwargs) -> bool:
-        try:
-            content_message = ContentMessage.model_validate(raw_message)
-            return self._process_content(content_message)
-        except Exception as e:
-            self._logger.error(f"Content processing failed: {e}")
-            return False
+        with SpanContextFactory.internal("content_processor", "orchestrate"):
+            try:
+                content_message = ContentMessage.model_validate(raw_message)
+                return self._process_content(content_message)
+            except Exception as e:
+                self._logger.error(f"Content processing failed: {e}")
+                return False
 
     def _process_content(self, message: ContentMessage) -> bool:
         raw = message.raw_content
@@ -68,11 +70,11 @@ class ContentProcessorOrchestrator(MessageHandler):
         try:
             start_time = time.time()
 
-            prompt = PROCESSING_PROMPT.format(title=raw.title, content=raw.content[:3000])
-            config = InferenceConfig(model=self._model, temperature=0.3)
-            output = self._llm_provider.run_inference(prompt=prompt, config=config)
-
-            enrichment = json.loads(output.response)
+            with SpanContextFactory.client("LLM", self._llm_provider, "content_processor", "run_inference"):
+                prompt = PROCESSING_PROMPT.format(title=raw.title, content=raw.content[:3000])
+                config = InferenceConfig(model=self._model, temperature=0.3)
+                output = self._llm_provider.run_inference(prompt=prompt, config=config)
+                enrichment = json.loads(output.response)
 
             entities = [
                 ArticleEntity(
@@ -100,7 +102,8 @@ class ContentProcessorOrchestrator(MessageHandler):
                 metadata=raw.metadata,
             )
 
-            self._content_repository.store_article(article)
+            with SpanContextFactory.client("MONGODB", self._content_repository, "content_processor", "store_article"):
+                self._content_repository.store_article(article)
 
             latency = (time.time() - start_time) * 1000
             self._logger.info(

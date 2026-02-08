@@ -10,6 +10,8 @@ from src.objects.messages.query_message import QueryMessage
 from src.objects.requests.query_request import QueryRequest
 from src.objects.responses.query_response import QueryResponse
 from src.utils.observability.logs.logger import Logger
+from src.utils.observability.traces.spans.span_context_factory import SpanContextFactory
+from src.utils.observability.traces.spans.spanner import Spanner
 
 
 class QuerySubmissionService:
@@ -22,6 +24,7 @@ class QuerySubmissionService:
         query_topic: str = "query",
     ):
         self._logger = Logger()
+        self._spanner = Spanner()
         self._state_repository = state_repository
         self._message_publisher = message_publisher
         self._query_topic = query_topic
@@ -34,13 +37,18 @@ class QuerySubmissionService:
             query_request=query_request,
             stage=RequestStage.Gateway,
         )
-        self._state_repository.create(request_id, processed_query.model_dump(mode="json"))
+        with SpanContextFactory.client("REDIS", self._state_repository, "gateway", "create"):
+            self._state_repository.create(request_id, processed_query.model_dump(mode="json"))
+
+        telemetry_headers = self._spanner.inject_telemetry_context({})
 
         message = QueryMessage(
             request_id=request_id,
             query_request=query_request,
+            telemetry_headers=telemetry_headers,
         )
-        self._message_publisher.publish(self._query_topic, message.model_dump_json())
+        with SpanContextFactory.producer(self._query_topic):
+            self._message_publisher.publish(self._query_topic, message.model_dump_json())
 
         return QueryResponse(
             request_id=request_id,
@@ -48,7 +56,8 @@ class QuerySubmissionService:
         )
 
     def get_query_status(self, request_id: str) -> ProcessedQuery:
-        state_data = self._state_repository.get(request_id)
+        with SpanContextFactory.client("REDIS", self._state_repository, "gateway", "get"):
+            state_data = self._state_repository.get(request_id)
         if state_data is None:
             raise KeyError(f"Query {request_id} not found")
         return ProcessedQuery.model_validate(state_data)
