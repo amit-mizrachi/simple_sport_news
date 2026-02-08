@@ -42,6 +42,7 @@ class MongoDBClient(ArticleStore):
         sources: Optional[List[str]] = None,
         date_from: Optional[str] = None,
         date_to: Optional[str] = None,
+        entity_type: Optional[str] = None,
         limit: int = 20
     ) -> List[Dict[str, Any]]:
         params: Dict[str, Any] = {"limit": limit}
@@ -55,6 +56,8 @@ class MongoDBClient(ArticleStore):
             params["date_from"] = date_from
         if date_to:
             params["date_to"] = date_to
+        if entity_type:
+            params["entity_type"] = entity_type
 
         response = self._client.get(f"{self._base_url}/articles", params=params)
         response.raise_for_status()

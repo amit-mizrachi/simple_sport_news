@@ -2,6 +2,7 @@
 import asyncio
 import signal
 
+from src.services.content_poller.dedup_cache import DeduplicationCache
 from src.services.content_poller.poller import ContentPoller
 from src.services.content_poller.sources.reddit_source import RedditSource
 from src.services.content_poller.sources.rss_source import RSSSource
@@ -53,12 +54,19 @@ def create_content_poller() -> ContentPoller:
     content_topic = config.get("topics.content_raw", "content-raw")
     poll_interval = int(config.get("poller.interval_seconds", 300))
 
+    try:
+        dedup_cache = DeduplicationCache()
+    except Exception as e:
+        logger.warning(f"Dedup cache not available, falling back to MongoDB-only: {e}")
+        dedup_cache = None
+
     return ContentPoller(
         sources=sources,
         content_repository=get_content_repository(),
         message_publisher=get_message_publisher(),
         content_topic=content_topic,
         poll_interval=poll_interval,
+        dedup_cache=dedup_cache,
     )
 
 

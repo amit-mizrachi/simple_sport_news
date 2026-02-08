@@ -2,12 +2,13 @@
 import asyncio
 import uuid
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 
 from src.interfaces.article_store import ArticleStore
 from src.interfaces.content_source import ContentSource
 from src.interfaces.message_publisher import MessagePublisher
 from src.objects.messages.content_message import ContentMessage
+from src.services.content_poller.dedup_cache import DeduplicationCache
 from src.utils.observability.logs.logger import Logger
 
 
@@ -21,6 +22,7 @@ class ContentPoller:
         message_publisher: MessagePublisher,
         content_topic: str = "content-raw",
         poll_interval: int = 300,
+        dedup_cache: Optional[DeduplicationCache] = None,
     ):
         self._logger = Logger()
         self._sources = sources
@@ -28,6 +30,7 @@ class ContentPoller:
         self._message_publisher = message_publisher
         self._content_topic = content_topic
         self._poll_interval = poll_interval
+        self._dedup_cache = dedup_cache
         self._running = True
         self._last_poll: datetime = datetime.now(tz=timezone.utc)
 
@@ -48,7 +51,7 @@ class ContentPoller:
                 self._logger.info(f"Fetched {len(items)} items from {source.get_source_name()}")
 
                 for item in items:
-                    if self._content_repository.article_exists(item.source, item.source_id):
+                    if self._is_duplicate(item.source, item.source_id):
                         continue
 
                     message = ContentMessage(
@@ -58,10 +61,19 @@ class ContentPoller:
                     self._message_publisher.publish(
                         self._content_topic, message.model_dump_json()
                     )
+
+                    if self._dedup_cache:
+                        self._dedup_cache.mark_seen(item.source, item.source_id)
             except Exception as e:
                 self._logger.error(f"Error polling {source.get_source_name()}: {e}")
 
         self._last_poll = datetime.now(tz=timezone.utc)
+
+    def _is_duplicate(self, source: str, source_id: str) -> bool:
+        """Check dedup cache first (Redis Set, sub-ms), fall back to MongoDB."""
+        if self._dedup_cache and self._dedup_cache.exists(source, source_id):
+            return True
+        return self._content_repository.article_exists(source, source_id)
 
     def stop(self):
         self._running = False

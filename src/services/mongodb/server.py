@@ -29,6 +29,7 @@ async def query_articles(
     sources: str = Query(None),
     date_from: str = Query(None),
     date_to: str = Query(None),
+    entity_type: str = Query(None),
     limit: int = Query(20)
 ):
     entity_list = entities.split(",") if entities else None
@@ -41,6 +42,7 @@ async def query_articles(
         sources=source_list,
         date_from=date_from,
         date_to=date_to,
+        entity_type=entity_type,
         limit=limit
     )
 
