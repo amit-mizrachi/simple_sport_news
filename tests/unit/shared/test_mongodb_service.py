@@ -1,4 +1,4 @@
-"""Tests for MongoDBClient (mocked MongoDB)."""
+"""Tests for MongoDBArticleRepository (mocked MongoDB)."""
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch, PropertyMock
 
@@ -8,7 +8,7 @@ from src.shared.objects.content.article_entity import ArticleEntity
 from src.shared.objects.content.processed_article import ProcessedArticle
 
 
-class TestMongoDBClient:
+class TestMongoDBArticleRepository:
     @pytest.fixture
     def mock_mongo(self):
         """Mock MongoClient and its chain: client -> db -> collection."""
@@ -23,16 +23,16 @@ class TestMongoDBClient:
     @pytest.fixture
     def repository(self, mock_mongo):
         mock_client, mock_db, mock_collection = mock_mongo
-        with patch("src.shared.storage.mongodb_client.get_config_service") as mock_config, \
-             patch("src.shared.storage.mongodb_client.MongoClient", return_value=mock_client):
+        with patch("src.shared.storage.mongodb_article_repository.get_config_service") as mock_config, \
+             patch("src.shared.storage.mongodb_article_repository.MongoClient", return_value=mock_client):
             mock_config.return_value.get.side_effect = lambda key, default=None: {
                 "mongodb.host": "localhost",
                 "mongodb.port": "27017",
                 "mongodb.database": "testdb",
             }.get(key, default)
 
-            from src.shared.storage.mongodb_client import MongoDBClient
-            repo = MongoDBClient()
+            from src.shared.storage.mongodb_article_repository import MongoDBArticleRepository
+            repo = MongoDBArticleRepository()
         return repo, mock_collection
 
     def test_store_article(self, repository, sample_processed_article):

@@ -1,8 +1,8 @@
 """Ollama local inference provider configuration."""
 from dataclasses import dataclass
 
-from src.shared.interfaces.inference_provider_config import InferenceProviderConfig
-from src.shared.interfaces.llm_provider import LLMProvider
+from src.shared.interfaces.inference.inference_provider_config import InferenceProviderConfig
+from src.shared.interfaces.inference.inference_provider import InferenceProvider
 from src.shared.objects.enums.inference_mode import InferenceMode
 from src.shared.inference.providers.ollama_provider import OllamaProvider
 
@@ -29,5 +29,5 @@ class OllamaProviderConfig(InferenceProviderConfig):
     def inference_mode(self) -> InferenceMode:
         return InferenceMode.LOCAL
 
-    def create_provider(self) -> LLMProvider:
+    def create_provider(self) -> InferenceProvider:
         return OllamaProvider(base_url=self.base_url)

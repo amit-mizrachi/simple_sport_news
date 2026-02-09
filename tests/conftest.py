@@ -4,12 +4,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.shared.interfaces.article_store import ArticleStore
-from src.shared.interfaces.llm_provider import LLMProvider
-from src.shared.objects.inference.inference_config import InferenceConfig
+from src.shared.interfaces.article_repository import ArticleRepository
+from src.shared.interfaces.inference.inference_provider import InferenceProvider
 from src.shared.objects.inference.inference_result import InferenceResult
-from src.shared.interfaces.message_publisher import MessagePublisher
-from src.shared.interfaces.state_repository import StateRepository
+from src.shared.interfaces.messaging.message_publisher import MessagePublisher
+from src.shared.interfaces.query_state_repository import QueryStateRepository
 from src.shared.objects.content.raw_article import RawArticle
 from src.shared.objects.content.article_entity import ArticleEntity
 from src.shared.objects.content.processed_article import ProcessedArticle
@@ -99,7 +98,7 @@ def sample_query_result():
 
 @pytest.fixture
 def mock_state_repository():
-    mock = MagicMock(spec=StateRepository)
+    mock = MagicMock(spec=QueryStateRepository)
     mock.create.return_value = {}
     mock.get.return_value = None
     mock.update.return_value = {}
@@ -110,7 +109,7 @@ def mock_state_repository():
 
 @pytest.fixture
 def mock_content_repository():
-    mock = MagicMock(spec=ArticleStore)
+    mock = MagicMock(spec=ArticleRepository)
     mock.store_article.return_value = {}
     mock.article_exists.return_value = False
     mock.query_articles.return_value = []
@@ -128,7 +127,7 @@ def mock_message_publisher():
 
 @pytest.fixture
 def mock_llm_provider():
-    mock_provider = MagicMock(spec=LLMProvider)
+    mock_provider = MagicMock(spec=InferenceProvider)
     mock_provider.run_inference.return_value = InferenceResult(
         response='{"summary": "Test summary", "entities": [], "categories": ["test"], "sentiment": "neutral"}',
         model="gemini-2.0-flash",

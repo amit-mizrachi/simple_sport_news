@@ -1,8 +1,8 @@
 """OpenAI provider configuration."""
 from dataclasses import dataclass
 
-from src.shared.interfaces.inference_provider_config import InferenceProviderConfig
-from src.shared.interfaces.llm_provider import LLMProvider
+from src.shared.interfaces.inference.inference_provider_config import InferenceProviderConfig
+from src.shared.interfaces.inference.inference_provider import InferenceProvider
 from src.shared.objects.enums.inference_mode import InferenceMode
 from src.shared.inference.providers.openai_provider import OpenAIProvider
 
@@ -30,5 +30,5 @@ class OpenAIProviderConfig(InferenceProviderConfig):
     def inference_mode(self) -> InferenceMode:
         return InferenceMode.REMOTE
 
-    def create_provider(self) -> LLMProvider:
+    def create_provider(self) -> InferenceProvider:
         return OpenAIProvider(api_key=self.api_key, base_url=self.base_url)

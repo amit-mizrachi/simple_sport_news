@@ -3,9 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
 
-class StateRepository(ABC):
-    """Interface for managing request state throughout the processing pipeline."""
-
+class QueryStateRepository(ABC):
     @abstractmethod
     def create(self, request_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         pass

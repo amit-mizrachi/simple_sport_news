@@ -6,8 +6,6 @@ from src.shared.objects.inference.inference_result import InferenceResult
 
 
 class LLMProvider(ABC):
-    """Interface for LLM inference providers."""
-
     @abstractmethod
     def run_inference(self, prompt: str, config: InferenceConfig) -> InferenceResult:
         pass

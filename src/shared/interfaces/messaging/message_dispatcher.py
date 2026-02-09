@@ -5,8 +5,6 @@ from typing import Any
 
 
 class MessageDispatcher(ABC):
-    """Interface for dispatching raw queue messages to a worker pool."""
-
     @abstractmethod
     def submit(self, raw_message: Any, *args, **kwargs) -> Future:
         pass

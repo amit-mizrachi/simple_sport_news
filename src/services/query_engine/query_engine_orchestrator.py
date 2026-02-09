@@ -3,11 +3,11 @@ import json
 import time
 from datetime import datetime, timezone
 
-from src.shared.interfaces.article_store import ArticleStore
-from src.shared.interfaces.llm_provider import LLMProvider
-from src.shared.interfaces.message_handler import MessageHandler
+from src.shared.interfaces.article_repository import ArticleRepository
+from src.shared.interfaces.inference.inference_provider import InferenceProvider
+from src.shared.interfaces.messaging.message_handler import MessageHandler
 from src.shared.objects.inference.inference_config import InferenceConfig
-from src.shared.interfaces.state_repository import StateRepository
+from src.shared.interfaces.query_state_repository import QueryStateRepository
 from src.shared.objects.enums.request_stage import RequestStage
 from src.shared.objects.messages.query_message import QueryMessage
 from src.shared.objects.results.query_result import QueryResult
@@ -47,9 +47,9 @@ class QueryEngineOrchestrator(MessageHandler):
 
     def __init__(
         self,
-        state_repository: StateRepository,
-        content_repository: ArticleStore,
-        llm_provider: LLMProvider,
+        state_repository: QueryStateRepository,
+        content_repository: ArticleRepository,
+        llm_provider: InferenceProvider,
         model: str,
     ):
         self._logger = Logger()

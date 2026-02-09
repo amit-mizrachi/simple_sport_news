@@ -4,9 +4,9 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from src.shared.interfaces.article_store import ArticleStore
+from src.shared.interfaces.article_repository import ArticleRepository
 from src.shared.interfaces.content_source import ContentSource
-from src.shared.interfaces.message_publisher import MessagePublisher
+from src.shared.interfaces.messaging.message_publisher import MessagePublisher
 from src.shared.objects.messages.content_message import ContentMessage
 from src.services.content_poller.dedup_cache import DeduplicationCache
 from src.shared.observability.logs.logger import Logger
@@ -20,7 +20,7 @@ class ContentPoller:
     def __init__(
         self,
         sources: List[ContentSource],
-        content_repository: ArticleStore,
+        content_repository: ArticleRepository,
         message_publisher: MessagePublisher,
         content_topic: str = "content-raw",
         poll_interval: int = 300,

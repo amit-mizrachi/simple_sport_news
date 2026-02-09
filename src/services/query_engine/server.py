@@ -8,8 +8,8 @@ from src.shared.observability.traces.tracer import Tracer
 from src.shared.messaging.messaging_factory import get_message_consumer
 from src.shared.messaging.thread_pool_message_dispatcher import ThreadPoolMessageDispatcher
 from src.shared.aws.appconfig_service import get_config_service
-from src.shared.storage.mongodb_client import get_content_repository
-from src.shared.storage.redis_client import get_state_repository
+from src.shared.storage.mongodb_article_repository import get_content_repository
+from src.shared.storage.redis_state_repository import get_state_repository
 from src.shared.config.health import start_health_server_background
 from src.shared.config.ports import get_service_port
 from src.shared.inference.provider_config_builder import build_provider_config

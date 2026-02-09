@@ -1,8 +1,8 @@
 """Query Submission Service - handles query submission and status retrieval."""
 import uuid
 
-from src.shared.interfaces.message_publisher import MessagePublisher
-from src.shared.interfaces.state_repository import StateRepository
+from src.shared.interfaces.messaging.message_publisher import MessagePublisher
+from src.shared.interfaces.query_state_repository import QueryStateRepository
 from src.shared.objects.enums.request_stage import RequestStage
 from src.shared.objects.enums.request_status import RequestStatus
 from src.shared.objects.requests.processed_request import ProcessedQuery
@@ -19,7 +19,7 @@ class QuerySubmissionService:
 
     def __init__(
         self,
-        state_repository: StateRepository,
+        state_repository: QueryStateRepository,
         message_publisher: MessagePublisher,
         query_topic: str = "query",
     ):

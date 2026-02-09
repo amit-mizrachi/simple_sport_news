@@ -4,13 +4,13 @@ from typing import Any, Dict, List, Optional
 
 from pymongo import MongoClient, TEXT, ASCENDING, DESCENDING
 
-from src.shared.interfaces.article_store import ArticleStore
+from src.shared.interfaces.article_repository import ArticleRepository
 from src.shared.objects.content.processed_article import ProcessedArticle
 from src.shared.aws.appconfig_service import get_config_service
 
 
-class MongoDBClient(ArticleStore):
-    """Direct MongoDB-backed article storage and querying."""
+class MongoDBArticleRepository(ArticleRepository):
+    """MongoDB-backed article repository for storage and querying."""
 
     def __init__(self):
         config = get_config_service()
@@ -118,6 +118,6 @@ class MongoDBClient(ArticleStore):
 
 
 @lru_cache(maxsize=1)
-def get_content_repository() -> MongoDBClient:
-    """Get the singleton MongoDBClient instance."""
-    return MongoDBClient()
+def get_content_repository() -> MongoDBArticleRepository:
+    """Get the singleton MongoDBArticleRepository instance."""
+    return MongoDBArticleRepository()

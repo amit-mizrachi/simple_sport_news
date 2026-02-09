@@ -6,13 +6,13 @@ from typing import Any, Dict, Optional
 
 import redis
 
-from src.shared.interfaces.state_repository import StateRepository
+from src.shared.interfaces.query_state_repository import QueryStateRepository
 from src.shared.objects.requests.processed_request import ProcessedQuery
 from src.shared.aws.appconfig_service import get_config_service
 
 
-class RedisClient(StateRepository):
-    """Direct Redis-backed state repository."""
+class RedisStateRepository(QueryStateRepository):
+    """Redis-backed query state repository."""
 
     _KEY_PREFIX = "query:"
 
@@ -87,6 +87,6 @@ class RedisClient(StateRepository):
 
 
 @lru_cache(maxsize=1)
-def get_state_repository() -> RedisClient:
-    """Get the singleton RedisClient instance."""
-    return RedisClient()
+def get_state_repository() -> RedisStateRepository:
+    """Get the singleton RedisStateRepository instance."""
+    return RedisStateRepository()

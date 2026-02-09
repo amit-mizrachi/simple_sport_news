@@ -5,9 +5,7 @@ from src.shared.interfaces.llm_provider import LLMProvider
 from src.shared.objects.enums.inference_mode import InferenceMode
 
 
-class InferenceProviderConfig(ABC):
-    """Abstract config that knows how to create its own LLM provider."""
-
+class LLMProviderConfig(ABC):
     @property
     @abstractmethod
     def provider_name(self) -> str:

@@ -2,23 +2,23 @@
 # These abstract base classes define contracts that infrastructure must implement
 # Following the Dependency Inversion Principle (DIP)
 
-from src.shared.interfaces.state_repository import StateRepository
-from src.shared.interfaces.message_publisher import MessagePublisher
-from src.shared.interfaces.message_consumer import AsyncMessageConsumer
-from src.shared.interfaces.llm_provider import LLMProvider
-from src.shared.interfaces.inference_provider_config import InferenceProviderConfig
-from src.shared.interfaces.article_store import ArticleStore
+from src.shared.interfaces.query_state_repository import QueryStateRepository
+from src.shared.interfaces.messaging.message_publisher import MessagePublisher
+from src.shared.interfaces.messaging.message_consumer import AsyncMessageConsumer
+from src.shared.interfaces.inference.inference_provider import InferenceProvider
+from src.shared.interfaces.inference.inference_provider_config import InferenceProviderConfig
+from src.shared.interfaces.article_repository import ArticleRepository
 from src.shared.interfaces.content_source import ContentSource
-from src.shared.interfaces.message_handler import MessageHandler
-from src.shared.interfaces.message_dispatcher import MessageDispatcher
+from src.shared.interfaces.messaging.message_handler import MessageHandler
+from src.shared.interfaces.messaging.message_dispatcher import MessageDispatcher
 
 __all__ = [
-    "StateRepository",
+    "QueryStateRepository",
     "MessagePublisher",
     "AsyncMessageConsumer",
-    "LLMProvider",
+    "InferenceProvider",
     "InferenceProviderConfig",
-    "ArticleStore",
+    "ArticleRepository",
     "ContentSource",
     "MessageHandler",
     "MessageDispatcher",

@@ -5,9 +5,7 @@ from typing import Any, Dict, List, Optional
 from src.shared.objects.content.processed_article import ProcessedArticle
 
 
-class ArticleStore(ABC):
-    """Interface for storing and querying processed articles."""
-
+class ArticleRepository(ABC):
     @abstractmethod
     def store_article(self, article: ProcessedArticle) -> Dict[str, Any]:
         pass
