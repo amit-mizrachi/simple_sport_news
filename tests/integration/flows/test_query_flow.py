@@ -6,11 +6,11 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.shared.objects.inference.inference_result import InferenceResult
-from src.shared.objects.requests.processed_request import ProcessedQuery
+from src.shared.objects.requests.processed_request import ProcessedRequest
 from src.shared.objects.enums.request_stage import RequestStage
 from src.shared.objects.enums.request_status import RequestStatus
 from src.shared.objects.requests.query_request import QueryRequest
-from src.services.gateway.query_submission_service import QuerySubmissionService
+from src.services.gateway.request_submission_service import RequestSubmissionService
 from src.services.query_engine.query_engine_orchestrator import QueryEngineOrchestrator
 
 
@@ -21,12 +21,12 @@ class TestQueryFlow:
     ):
         """Test: submit query at gateway → process in query engine → result stored in state."""
         # Phase 1: Submit query via gateway
-        gateway_service = QuerySubmissionService(
+        gateway_service = RequestSubmissionService(
             state_repository=mock_state_repository,
             message_publisher=mock_message_publisher,
             query_topic="query",
         )
-        response = gateway_service.submit_query(sample_query_request)
+        response = gateway_service.submit_request(sample_query_request)
         assert response.status == RequestStatus.Accepted
         request_id = response.request_id
 

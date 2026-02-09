@@ -2,7 +2,7 @@
 # These abstract base classes define contracts that infrastructure must implement
 # Following the Dependency Inversion Principle (DIP)
 
-from src.shared.interfaces.query_state_repository import QueryStateRepository
+from src.shared.interfaces.request_state_repository import RequestStateRepository
 from src.shared.interfaces.messaging.message_publisher import MessagePublisher
 from src.shared.interfaces.messaging.message_consumer import AsyncMessageConsumer
 from src.shared.interfaces.inference.inference_provider import InferenceProvider
@@ -13,7 +13,7 @@ from src.shared.interfaces.messaging.message_handler import MessageHandler
 from src.shared.interfaces.messaging.message_dispatcher import MessageDispatcher
 
 __all__ = [
-    "QueryStateRepository",
+    "RequestStateRepository",
     "MessagePublisher",
     "AsyncMessageConsumer",
     "InferenceProvider",

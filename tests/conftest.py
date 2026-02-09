@@ -8,7 +8,7 @@ from src.shared.interfaces.article_repository import ArticleRepository
 from src.shared.interfaces.inference.inference_provider import InferenceProvider
 from src.shared.objects.inference.inference_result import InferenceResult
 from src.shared.interfaces.messaging.message_publisher import MessagePublisher
-from src.shared.interfaces.query_state_repository import QueryStateRepository
+from src.shared.interfaces.request_state_repository import RequestStateRepository
 from src.shared.objects.content.raw_article import RawArticle
 from src.shared.objects.content.article_entity import ArticleEntity
 from src.shared.objects.content.processed_article import ProcessedArticle
@@ -25,7 +25,7 @@ def mock_logger():
     patches = [
         patch("src.services.content_processor.content_processor_orchestrator.Logger", return_value=mock_instance),
         patch("src.services.query_engine.query_engine_orchestrator.Logger", return_value=mock_instance),
-        patch("src.services.gateway.query_submission_service.Logger", return_value=mock_instance),
+        patch("src.services.gateway.request_submission_service.Logger", return_value=mock_instance),
     ]
     for p in patches:
         p.start()
@@ -98,7 +98,7 @@ def sample_query_result():
 
 @pytest.fixture
 def mock_state_repository():
-    mock = MagicMock(spec=QueryStateRepository)
+    mock = MagicMock(spec=RequestStateRepository)
     mock.create.return_value = {}
     mock.get.return_value = None
     mock.update.return_value = {}

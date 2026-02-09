@@ -6,13 +6,13 @@ from typing import Any, Dict, Optional
 
 import redis
 
-from src.shared.interfaces.query_state_repository import QueryStateRepository
-from src.shared.objects.requests.processed_request import ProcessedQuery
+from src.shared.interfaces.request_state_repository import RequestStateRepository
+from src.shared.objects.requests.processed_request import ProcessedRequest
 from src.shared.aws.appconfig_service import get_config_service
 
 
-class RedisStateRepository(QueryStateRepository):
-    """Redis-backed query state repository."""
+class RedisStateRepository(RequestStateRepository):
+    """Redis-backed request state repository."""
 
     _KEY_PREFIX = "query:"
 
@@ -60,23 +60,23 @@ class RedisStateRepository(QueryStateRepository):
         except Exception:
             return False
 
-    def create_query(self, query: ProcessedQuery) -> ProcessedQuery:
-        data = self.create(query.request_id, query.model_dump(mode="json"))
-        return ProcessedQuery.model_validate(data)
+    def create_request(self, processed_request: ProcessedRequest) -> ProcessedRequest:
+        data = self.create(processed_request.request_id, processed_request.model_dump(mode="json"))
+        return ProcessedRequest.model_validate(data)
 
-    def get_query(self, request_id: str) -> Optional[ProcessedQuery]:
+    def get_request(self, request_id: str) -> Optional[ProcessedRequest]:
         data = self.get(request_id)
         if data is None:
             return None
-        return ProcessedQuery.model_validate(data)
+        return ProcessedRequest.model_validate(data)
 
-    def update_query(self, request_id: str, updates: dict) -> Optional[ProcessedQuery]:
+    def update_request(self, request_id: str, updates: dict) -> Optional[ProcessedRequest]:
         data = self.update(request_id, updates)
         if data is None:
             return None
-        return ProcessedQuery.model_validate(data)
+        return ProcessedRequest.model_validate(data)
 
-    def delete_query(self, request_id: str) -> bool:
+    def delete_request(self, request_id: str) -> bool:
         return self.delete(request_id)
 
     def health_check(self) -> bool:

@@ -7,7 +7,7 @@ from src.shared.interfaces.article_repository import ArticleRepository
 from src.shared.interfaces.inference.inference_provider import InferenceProvider
 from src.shared.interfaces.messaging.message_handler import MessageHandler
 from src.shared.objects.inference.inference_config import InferenceConfig
-from src.shared.interfaces.query_state_repository import QueryStateRepository
+from src.shared.interfaces.request_state_repository import RequestStateRepository
 from src.shared.objects.enums.request_stage import RequestStage
 from src.shared.objects.messages.query_message import QueryMessage
 from src.shared.objects.results.query_result import QueryResult
@@ -47,7 +47,7 @@ class QueryEngineOrchestrator(MessageHandler):
 
     def __init__(
         self,
-        state_repository: QueryStateRepository,
+        state_repository: RequestStateRepository,
         content_repository: ArticleRepository,
         llm_provider: InferenceProvider,
         model: str,

@@ -1,8 +1,8 @@
-"""Gateway Service - REST API for query submission and status retrieval."""
+"""Gateway Service - REST API for request submission and status retrieval."""
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 
-from src.services.gateway.query_submission_service import QuerySubmissionService
+from src.services.gateway.request_submission_service import RequestSubmissionService
 from src.shared.objects.requests.query_request import QueryRequest
 from src.shared.observability.logs.logger import Logger
 from src.shared.observability.traces.spans.span_context_factory import SpanContextFactory
@@ -19,35 +19,35 @@ spanner = Spanner()
 SERVICE_PORT_KEY = "services.gateway.port"
 
 
-def create_query_service() -> QuerySubmissionService:
+def create_request_service() -> RequestSubmissionService:
     config_service = get_config_service()
-    return QuerySubmissionService(
+    return RequestSubmissionService(
         state_repository=get_state_repository(),
         message_publisher=get_message_publisher(),
         query_topic=config_service.get("topics.query", "query"),
     )
 
 
-query_service = create_query_service()
+request_service = create_request_service()
 
 
 @app.post("/query")
-async def submit_query(query_request: QueryRequest, request: Request):
+async def submit_request(query_request: QueryRequest, request: Request):
     telemetry_context = spanner.extract_telemetry_context(dict(request.headers))
     with SpanContextFactory.server("POST", "/query", telemetry_context=telemetry_context):
-        logger.info("Submitting query")
-        response = query_service.submit_query(query_request)
-        logger.info(f"Successfully submitted query {response.request_id}")
+        logger.info("Submitting request")
+        response = request_service.submit_request(query_request)
+        logger.info(f"Successfully submitted request {response.request_id}")
         return response
 
 
 @app.get("/query/{request_id}")
-async def get_query_status(request_id: str, request: Request):
+async def get_request_status(request_id: str, request: Request):
     telemetry_context = spanner.extract_telemetry_context(dict(request.headers))
     with SpanContextFactory.server("GET", "/query/{request_id}", telemetry_context=telemetry_context):
-        logger.info(f"Getting query status for {request_id}")
+        logger.info(f"Getting request status for {request_id}")
         try:
-            result = query_service.get_query_status(request_id)
+            result = request_service.get_request_status(request_id)
             logger.info(f"Successfully got status for {request_id}")
             return result
         except KeyError as e:

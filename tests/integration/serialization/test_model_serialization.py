@@ -7,7 +7,7 @@ import pytest
 from src.shared.objects.content.raw_article import RawArticle
 from src.shared.objects.content.article_entity import ArticleEntity
 from src.shared.objects.content.processed_article import ProcessedArticle
-from src.shared.objects.requests.processed_request import ProcessedQuery
+from src.shared.objects.requests.processed_request import ProcessedRequest
 from src.shared.objects.enums.request_stage import RequestStage
 from src.shared.objects.messages.content_message import ContentMessage
 from src.shared.objects.messages.query_message import QueryMessage
@@ -53,20 +53,20 @@ class TestModelSerializationRoundTrips:
 
     def test_processed_query_full_lifecycle(self, sample_query_request, sample_query_result):
         # Gateway stage
-        pq = ProcessedQuery(
+        pq = ProcessedRequest(
             request_id="lifecycle-1",
             query_request=sample_query_request,
             stage=RequestStage.Gateway,
         )
         s1 = pq.model_dump_json()
-        r1 = ProcessedQuery.model_validate_json(s1)
+        r1 = ProcessedRequest.model_validate_json(s1)
         assert r1.stage == RequestStage.Gateway
         assert r1.query_result is None
 
         # Processing stage
         pq_processing = r1.model_copy(update={"stage": RequestStage.QueryProcessing})
         s2 = pq_processing.model_dump_json()
-        r2 = ProcessedQuery.model_validate_json(s2)
+        r2 = ProcessedRequest.model_validate_json(s2)
         assert r2.stage == RequestStage.QueryProcessing
 
         # Completed stage
@@ -75,7 +75,7 @@ class TestModelSerializationRoundTrips:
             "query_result": sample_query_result,
         })
         s3 = pq_completed.model_dump_json()
-        r3 = ProcessedQuery.model_validate_json(s3)
+        r3 = ProcessedRequest.model_validate_json(s3)
         assert r3.stage == RequestStage.Completed
         assert r3.query_result.answer == sample_query_result.answer
 

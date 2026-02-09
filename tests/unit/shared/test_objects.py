@@ -4,13 +4,13 @@ from datetime import datetime, timezone
 from src.shared.objects.content.raw_article import RawArticle
 from src.shared.objects.content.article_entity import ArticleEntity
 from src.shared.objects.content.processed_article import ProcessedArticle
-from src.shared.objects.requests.processed_request import ProcessedQuery
+from src.shared.objects.requests.processed_request import ProcessedRequest
 from src.shared.objects.enums.request_stage import RequestStage
 from src.shared.objects.messages.content_message import ContentMessage
 from src.shared.objects.messages.query_message import QueryMessage
 from src.shared.objects.requests.query_filters import QueryFilters
 from src.shared.objects.requests.query_request import QueryRequest
-from src.shared.objects.responses.query_response import QueryResponse
+from src.shared.objects.responses.request_response import RequestResponse
 from src.shared.objects.enums.request_status import RequestStatus
 from src.shared.objects.results.query_result import QueryResult
 from src.shared.objects.results.source_reference import SourceReference
@@ -69,29 +69,29 @@ class TestQueryResult:
         assert restored.model == "gemini-2.0-flash"
 
 
-class TestQueryResponse:
+class TestRequestResponse:
     def test_serialization(self):
-        resp = QueryResponse(request_id="test-123", status=RequestStatus.Accepted)
+        resp = RequestResponse(request_id="test-123", status=RequestStatus.Accepted)
         data = resp.model_dump()
         assert data["status"] == "Accepted"
 
 
-class TestProcessedQuery:
+class TestProcessedRequest:
     def test_serialization_roundtrip(self, sample_query_request, sample_query_result):
-        pq = ProcessedQuery(
+        pq = ProcessedRequest(
             request_id="req-123",
             query_request=sample_query_request,
             stage=RequestStage.Completed,
             query_result=sample_query_result,
         )
         json_str = pq.model_dump_json()
-        restored = ProcessedQuery.model_validate_json(json_str)
+        restored = ProcessedRequest.model_validate_json(json_str)
         assert restored.request_id == "req-123"
         assert restored.stage == RequestStage.Completed
         assert restored.query_result.answer == sample_query_result.answer
 
     def test_initial_state(self, sample_query_request):
-        pq = ProcessedQuery(
+        pq = ProcessedRequest(
             request_id="req-456",
             query_request=sample_query_request,
             stage=RequestStage.Gateway,

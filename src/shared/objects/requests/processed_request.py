@@ -8,8 +8,8 @@ from src.shared.objects.enums.request_stage import RequestStage
 from src.shared.objects.results.query_result import QueryResult
 
 
-class ProcessedQuery(BaseModel):
-    """Data structure representing the state of a query through the pipeline."""
+class ProcessedRequest(BaseModel):
+    """Data structure representing the state of a request through the pipeline."""
     request_id: str
     query_request: QueryRequest
     stage: RequestStage
