@@ -2,10 +2,11 @@
 import redis
 
 from src.shared.appconfig_client import get_config_service
+from src.shared.interfaces.dedup_cache import DedupCache
 from src.shared.observability.logs.logger import Logger
 
 
-class DeduplicationCache:
+class RedisDedupCache(DedupCache):
     _SET_KEY = "dedup:seen_articles"
 
     def __init__(self):

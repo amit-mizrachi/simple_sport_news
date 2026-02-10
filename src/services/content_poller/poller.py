@@ -8,7 +8,7 @@ from src.shared.interfaces.repositories.article_repository import ArticleReposit
 from src.shared.interfaces.content_source import ContentSource
 from src.shared.interfaces.messaging.message_publisher import MessagePublisher
 from src.shared.objects.messages.content_message import ContentMessage
-from src.services.content_poller.dedup_cache import DeduplicationCache
+from src.shared.interfaces.dedup_cache import DedupCache
 from src.shared.observability.logs.logger import Logger
 from src.shared.observability.traces.spans.span_context_factory import SpanContextFactory
 from src.shared.observability.traces.spans.spanner import Spanner
@@ -23,7 +23,7 @@ class ContentPoller:
         message_publisher: MessagePublisher,
         content_topic: str = "content-raw",
         poll_interval: int = 300,
-        dedup_cache: Optional[DeduplicationCache] = None,
+        dedup_cache: Optional[DedupCache] = None,
     ):
         self._logger = Logger()
         self._spanner = Spanner()

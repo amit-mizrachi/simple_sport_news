@@ -2,7 +2,7 @@
 import asyncio
 import signal
 
-from src.services.content_poller.dedup_cache import DeduplicationCache
+from src.services.content_poller.redis_dedup_cache import RedisDedupCache
 from src.services.content_poller.poller import ContentPoller
 from src.services.content_poller.content_sources.reddit_content_source import RedditContentSource
 from src.services.content_poller.content_sources.rss_content_source import RSSContentSource
@@ -53,7 +53,7 @@ def create_content_poller() -> ContentPoller:
     poll_interval = int(config.get("poller.interval_seconds", 300))
 
     try:
-        dedup_cache = DeduplicationCache()
+        dedup_cache = RedisDedupCache()
     except Exception as e:
         logger.warning(f"Dedup cache not available, falling back to MongoDB-only: {e}")
         dedup_cache = None
