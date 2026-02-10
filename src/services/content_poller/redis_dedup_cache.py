@@ -1,4 +1,4 @@
-"""Redis Set-based deduplication cache for fast article existence checks."""
+"""Redis key-per-article deduplication cache with automatic TTL expiration."""
 from typing import Optional
 
 import redis
@@ -7,9 +7,11 @@ from src.shared.appconfig_client import get_config_service
 from src.shared.interfaces.dedup_cache import DedupCache
 from src.shared.observability.logs.logger import Logger
 
+_KEY_PREFIX = "dedup:seen"
+_TTL_SECONDS = 3600
+
 
 class RedisDedupCache(DedupCache):
-    _SET_KEY = "dedup:seen_articles"
 
     def __init__(self):
         self._logger = Logger()
@@ -20,18 +22,18 @@ class RedisDedupCache(DedupCache):
 
     def exists(self, source: str, source_id: str) -> bool:
         """Check if an article has already been seen."""
-        member = f"{source}:{source_id}"
+        key = f"{_KEY_PREFIX}:{source}:{source_id}"
         try:
-            return self._client.sismember(self._SET_KEY, member)
+            return self._client.exists(key) == 1
         except Exception as e:
             self._logger.warning(f"Dedup cache unavailable, deferring to fallback: {e}")
             return False
 
     def mark_seen(self, source: str, source_id: str) -> None:
-        """Mark an article as seen."""
-        member = f"{source}:{source_id}"
+        """Mark an article as seen with a 1-hour TTL."""
+        key = f"{_KEY_PREFIX}:{source}:{source_id}"
         try:
-            self._client.sadd(self._SET_KEY, member)
+            self._client.set(key, 1, ex=_TTL_SECONDS)
         except Exception as e:
             self._logger.warning(f"Failed to mark article in dedup cache: {e}")
 
