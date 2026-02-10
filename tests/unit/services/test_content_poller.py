@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.shared.objects.content.raw_article import RawArticle
-from src.services.content_poller.poller import ContentPoller
+from src.services.content_poller.content_poller import ContentPoller
 from src.services.content_poller.content_sources.content_source_factory import build_content_sources
 from src.services.content_poller.content_sources.rss_content_source import RSSContentSource
 

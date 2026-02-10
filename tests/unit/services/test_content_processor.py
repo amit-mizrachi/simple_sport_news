@@ -1,4 +1,4 @@
-"""Tests for ContentProcessorOrchestrator."""
+"""Tests for ContentAnalyzer."""
 import json
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
@@ -7,13 +7,13 @@ import pytest
 
 from src.shared.objects.inference.inference_result import InferenceResult
 from src.shared.objects.content.raw_article import RawArticle
-from src.services.content_processor.content_processor_orchestrator import ContentProcessorOrchestrator
+from src.services.content_processor.content_analyzer import ContentAnalyzer
 
 
-class TestContentProcessorOrchestrator:
+class TestContentAnalyzer:
     @pytest.fixture
     def orchestrator(self, mock_content_repository, mock_llm_provider):
-        return ContentProcessorOrchestrator(
+        return ContentAnalyzer(
             content_repository=mock_content_repository,
             llm_provider=mock_llm_provider,
             model="gemini-2.0-flash",

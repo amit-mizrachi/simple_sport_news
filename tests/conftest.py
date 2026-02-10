@@ -24,18 +24,25 @@ from src.shared.objects.results.source_reference import SourceReference
 def mock_logger():
     """Auto-mock Logger everywhere to avoid AppConfig/AWS calls in tests."""
     mock_instance = MagicMock()
-    patches = [
-        patch("src.services.content_processor.content_processor_orchestrator.Logger", return_value=mock_instance),
-        patch("src.services.query_engine.query_engine_orchestrator.Logger", return_value=mock_instance),
-        patch("src.services.gateway.request_submission_service.Logger", return_value=mock_instance),
-        patch("src.services.content_poller.poller.Logger", return_value=mock_instance),
-        patch("src.services.content_poller.content_sources.rss_content_source.Logger", return_value=mock_instance),
-        patch("src.services.content_poller.content_sources.reddit_content_source.Logger", return_value=mock_instance),
-        patch("src.services.content_poller.content_sources.content_source_factory.Logger", return_value=mock_instance),
-        patch("src.services.content_poller.redis_dedup_cache.Logger", return_value=mock_instance),
+    patch_targets = [
+        "src.services.content_processor.content_analyzer.Logger",
+        "src.services.query_engine.query_engine_orchestrator.Logger",
+        "src.services.gateway.request_submission_service.Logger",
+        "src.services.content_poller.poller.Logger",
+        "src.services.content_poller.content_ingester.Logger",
+        "src.services.content_poller.content_sources.rss_content_source.Logger",
+        "src.services.content_poller.content_sources.reddit_content_source.Logger",
+        "src.services.content_poller.content_sources.content_source_factory.Logger",
+        "src.services.content_poller.redis_dedup_cache.Logger",
     ]
-    for p in patches:
-        p.start()
+    patches = []
+    for target in patch_targets:
+        p = patch(target, return_value=mock_instance)
+        try:
+            p.start()
+            patches.append(p)
+        except (ModuleNotFoundError, AttributeError):
+            pass
     yield mock_instance
     for p in patches:
         p.stop()

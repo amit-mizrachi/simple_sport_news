@@ -1,18 +1,12 @@
 """Content Poller - periodically fetches content from configured content_sources."""
 import asyncio
-import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List
 
-from src.shared.interfaces.repositories.article_repository import ArticleRepository
 from src.shared.interfaces.content_source import ContentSource
-from src.shared.objects.content.raw_article import RawArticle
-from src.shared.interfaces.messaging.message_publisher import MessagePublisher
-from src.shared.objects.messages.content_message import ContentMessage
-from src.shared.interfaces.dedup_cache import DedupCache
+from src.services.content_poller.content_processor import ContentProcessor
 from src.shared.observability.logs.logger import Logger
 from src.shared.observability.traces.spans.span_context_factory import SpanContextFactory
-from src.shared.observability.traces.spans.spanner import Spanner
 from src.shared.messaging.context_preserving_thread_pool import ContextPreservingThreadPool
 
 
@@ -20,20 +14,13 @@ class ContentPoller:
     def __init__(
         self,
         sources: List[ContentSource],
-        content_repository: ArticleRepository,
-        message_publisher: MessagePublisher,
-        content_topic: str = "content-raw",
+        processor: ContentProcessor,
         poll_interval: int = 300,
-        dedup_cache: Optional[DedupCache] = None,
     ):
         self._logger = Logger()
-        self._spanner = Spanner()
         self._sources = sources
-        self._content_repository = content_repository
-        self._message_publisher = message_publisher
-        self._content_topic = content_topic
+        self._processor = processor
         self._poll_interval = poll_interval
-        self._dedup_cache = dedup_cache
         self._thread_pool = ContextPreservingThreadPool(max_workers=len(sources))
         self._running = True
         self._last_poll: datetime = datetime.now(tz=timezone.utc)
@@ -59,7 +46,7 @@ class ContentPoller:
             ]
             results = await asyncio.gather(*fetch_futures, return_exceptions=True)
 
-            # Phase 2: Process items sequentially (dedup -> build -> publish -> mark)
+            # Phase 2: Ingest items sequentially (dedup -> build -> publish -> mark)
             for source, result in zip(self._sources, results):
                 if isinstance(result, Exception):
                     self._logger.error(f"Error fetching from {source.get_source_name()}: {result}")
@@ -69,45 +56,16 @@ class ContentPoller:
 
                 for item in result:
                     try:
-                        self._process_item(item)
+                        self._processor.process(item)
                     except Exception as e:
-                        self._logger.error(f"Error processing item from {source.get_source_name()}: {e}")
+                        self._logger.error(f"Error ingesting item from {source.get_source_name()}: {e}")
 
             self._last_poll = datetime.now(tz=timezone.utc)
-
-    def _process_item(self, item: RawArticle) -> None:
-        """Dedup-check, build message, publish, and mark as seen."""
-        if self._is_duplicate(item.source, item.source_id):
-            return
-
-        telemetry_headers = self._spanner.inject_telemetry_context({})
-
-        message = ContentMessage(
-            request_id=str(uuid.uuid4()),
-            raw_content=item,
-            telemetry_headers=telemetry_headers,
-        )
-        with SpanContextFactory.producer(self._content_topic):
-            self._message_publisher.publish(
-                self._content_topic, message.model_dump_json()
-            )
-
-        if self._dedup_cache:
-            self._dedup_cache.mark_seen(item.source, item.source_id)
 
     def _fetch_source(self, source: ContentSource):
         """Fetch latest items from a single source. Runs in a worker thread."""
         with SpanContextFactory.client("HTTP", source, "content_poller", "fetch_latest"):
             return source.fetch_latest(since=self._last_poll)
-
-    def _is_duplicate(self, source: str, source_id: str) -> bool:
-        """Check dedup cache first (Redis Set, sub-ms), fall back to MongoDB."""
-        if self._dedup_cache:
-            with SpanContextFactory.client("REDIS", self._dedup_cache, "content_poller", "dedup_check"):
-                if self._dedup_cache.exists(source, source_id):
-                    return True
-        with SpanContextFactory.client("MONGODB", self._content_repository, "content_poller", "article_exists"):
-            return self._content_repository.article_exists(source, source_id)
 
     def stop(self):
         self._running = False

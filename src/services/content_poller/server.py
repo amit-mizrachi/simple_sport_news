@@ -3,8 +3,9 @@ import asyncio
 import signal
 
 from src.services.content_poller.content_sources.content_source_factory import build_content_sources
+from src.services.content_poller.content_processor import ContentProcessor
 from src.services.content_poller.redis_dedup_cache import get_dedup_cache
-from src.services.content_poller.poller import ContentPoller
+from src.services.content_poller.content_poller import ContentPoller
 from src.shared.observability.logs.logger import Logger
 from src.shared.observability.traces.tracer import Tracer
 from src.shared.messaging.messaging_factory import get_message_publisher
@@ -18,13 +19,16 @@ tracer = Tracer()
 
 def create_content_poller() -> ContentPoller:
     config = get_config_service()
-    return ContentPoller(
-        sources=build_content_sources(config),
+    ingester = ContentProcessor(
         content_repository=get_content_repository(),
         message_publisher=get_message_publisher(),
         content_topic=config.get("topics.content_raw", "content-raw"),
-        poll_interval=int(config.get("poller.interval_seconds", 300)),
         dedup_cache=get_dedup_cache(),
+    )
+    return ContentPoller(
+        sources=build_content_sources(config),
+        processor=ingester,
+        poll_interval=int(config.get("poller.interval_seconds", 300)),
     )
 
 

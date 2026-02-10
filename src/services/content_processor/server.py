@@ -2,7 +2,7 @@
 import asyncio
 import signal
 
-from src.services.content_processor.content_processor_orchestrator import ContentProcessorOrchestrator
+from src.services.content_processor.content_analyzer import ContentAnalyzer
 from src.shared.observability.logs.logger import Logger
 from src.shared.observability.traces.tracer import Tracer
 from src.shared.messaging.messaging_factory import get_message_consumer
@@ -16,10 +16,10 @@ logger = Logger()
 tracer = Tracer()
 
 
-def create_content_processor_orchestrator() -> ContentProcessorOrchestrator:
+def create_content_analyzer() -> ContentAnalyzer:
     config_service = get_config_service()
     provider_config = build_provider_config(config_service, "content_processor")
-    return ContentProcessorOrchestrator(
+    return ContentAnalyzer(
         content_repository=get_content_repository(),
         llm_provider=provider_config.create_provider(),
         model=provider_config.model,
@@ -29,8 +29,8 @@ def create_content_processor_orchestrator() -> ContentProcessorOrchestrator:
 async def main():
     logger.info("Starting Content Processor Service")
 
-    orchestrator = create_content_processor_orchestrator()
-    handler = ThreadPoolMessageDispatcher(orchestrator)
+    analyzer = create_content_analyzer()
+    handler = ThreadPoolMessageDispatcher(analyzer)
     consumer = get_message_consumer(handler, service_name="content_processor")
 
     port = int(get_config_service().get("services.content_processor.port"))

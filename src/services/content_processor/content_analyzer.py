@@ -1,4 +1,4 @@
-"""Content Processor Orchestrator - enriches raw content via LLM and stores in MongoDB."""
+"""Content Analyzer - enriches raw content via LLM and stores in MongoDB."""
 import json
 import time
 from datetime import datetime, timezone
@@ -40,8 +40,8 @@ Article content: {content}
 Return ONLY valid JSON, no markdown."""
 
 
-class ContentProcessorOrchestrator(MessageHandler):
-    """Processes raw content: LLM enrichment → MongoDB repositories."""
+class ContentAnalyzer(MessageHandler):
+    """Analyzes raw content: LLM enrichment → MongoDB storage."""
 
     def __init__(
         self,

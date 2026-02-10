@@ -8,7 +8,7 @@ import pytest
 from src.shared.objects.inference.inference_result import InferenceResult
 from src.shared.objects.content.raw_article import RawArticle
 from src.shared.objects.messages.content_message import ContentMessage
-from src.services.content_processor.content_processor_orchestrator import ContentProcessorOrchestrator
+from src.services.content_processor.content_analyzer import ContentAnalyzer
 
 
 class TestContentIngestionFlow:
@@ -38,7 +38,7 @@ class TestContentIngestionFlow:
         )
 
         # Process
-        processor = ContentProcessorOrchestrator(
+        processor = ContentAnalyzer(
             content_repository=mock_content_repository,
             llm_provider=mock_llm_provider,
             model="gemini-2.0-flash",
