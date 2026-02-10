@@ -37,35 +37,40 @@ class ContentPoller:
 
     async def _poll_cycle(self):
         with SpanContextFactory.internal("content_poller", "poll_cycle"):
-            loop = asyncio.get_running_loop()
+            results = await self._fetch_sources()
 
-            # Phase 1: Fetch all sources in parallel via thread pool
-            fetch_futures = [
-                loop.run_in_executor(self._thread_pool, self._fetch_source, source)
-                for source in self._sources
-            ]
-            results = await asyncio.gather(*fetch_futures, return_exceptions=True)
-
-            # Phase 2: Ingest items sequentially (dedup -> build -> publish -> mark)
-            for source, result in zip(self._sources, results):
-                if isinstance(result, Exception):
-                    self._logger.error(f"Error fetching from {source.get_source_name()}: {result}")
-                    continue
-
-                self._logger.info(f"Fetched {len(result)} items from {source.get_source_name()}")
-
-                for item in result:
-                    try:
-                        self._processor.process(item)
-                    except Exception as e:
-                        self._logger.error(f"Error ingesting item from {source.get_source_name()}: {e}")
+            self._process_sources(results)
 
             self._last_poll = datetime.now(tz=timezone.utc)
 
+    async def _fetch_sources(self):
+        loop = asyncio.get_running_loop()
+
+        fetch_futures = [
+            loop.run_in_executor(self._thread_pool, self._fetch_source, source)
+            for source in self._sources
+        ]
+        results = await asyncio.gather(*fetch_futures, return_exceptions=True)
+
+        return results
+
     def _fetch_source(self, source: ContentSource):
-        """Fetch latest items from a single source. Runs in a worker thread."""
         with SpanContextFactory.client("HTTP", source, "content_poller", "fetch_latest"):
             return source.fetch_latest(since=self._last_poll)
+
+    def _process_sources(self, results):
+        for source, result in zip(self._sources, results):
+            if isinstance(result, Exception):
+                self._logger.error(f"Error fetching from {source.get_source_name()}: {result}")
+                continue
+
+            self._logger.info(f"Fetched {len(result)} items from {source.get_source_name()}")
+
+            for item in result:
+                try:
+                    self._processor.process(item)
+                except Exception as e:
+                    self._logger.error(f"Error ingesting item from {source.get_source_name()}: {e}")
 
     def stop(self):
         self._running = False

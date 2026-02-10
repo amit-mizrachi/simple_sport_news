@@ -1,9 +1,9 @@
-"""Tests for RedisDedupCache."""
+"""Tests for RedisProcessedCache."""
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.services.content_poller.redis_dedup_cache import RedisDedupCache, get_dedup_cache, _KEY_PREFIX, _TTL_SECONDS
+from src.services.content_poller.redis_processed_cache import RedisProcessedCache, get_processed_cache, _KEY_PREFIX, _TTL_SECONDS
 
 
 @pytest.fixture
@@ -13,12 +13,12 @@ def mock_redis():
 
 @pytest.fixture
 def cache(mock_redis):
-    with patch("src.services.content_poller.redis_dedup_cache.Logger"), \
-         patch("src.services.content_poller.redis_dedup_cache.redis.Redis", return_value=mock_redis):
-        yield RedisDedupCache(host="localhost", port=6379)
+    with patch("src.services.content_poller.redis_processed_cache.Logger"), \
+         patch("src.services.content_poller.redis_processed_cache.redis.Redis", return_value=mock_redis):
+        yield RedisProcessedCache(host="localhost", port=6379)
 
 
-class TestRedisDedupCacheExists:
+class TestRedisProcessedCacheExists:
     def test_returns_true_when_key_exists(self, cache, mock_redis):
         mock_redis.exists.return_value = 1
 
@@ -37,9 +37,9 @@ class TestRedisDedupCacheExists:
         assert cache.exists("reddit", "abc123") is False
 
 
-class TestRedisDedupCacheMarkSeen:
+class TestRedisProcessedCacheMarkProcessed:
     def test_sets_key_with_ttl(self, cache, mock_redis):
-        cache.mark_seen("reddit", "abc123")
+        cache.mark_processed("reddit", "abc123")
 
         mock_redis.set.assert_called_once_with(f"{_KEY_PREFIX}:reddit:abc123", 1, ex=_TTL_SECONDS)
 
@@ -49,10 +49,10 @@ class TestRedisDedupCacheMarkSeen:
     def test_does_not_raise_on_redis_error(self, cache, mock_redis):
         mock_redis.set.side_effect = Exception("Connection refused")
 
-        cache.mark_seen("reddit", "abc123")  # should not raise
+        cache.mark_processed("reddit", "abc123")  # should not raise
 
 
-class TestRedisDedupCacheKeyFormat:
+class TestRedisProcessedCacheKeyFormat:
     def test_key_includes_source_and_id(self, cache, mock_redis):
         mock_redis.exists.return_value = 0
         cache.exists("bbc_sport", "0a1b2c3d4e5f6789")
@@ -60,7 +60,7 @@ class TestRedisDedupCacheKeyFormat:
         mock_redis.exists.assert_called_once_with(f"{_KEY_PREFIX}:bbc_sport:0a1b2c3d4e5f6789")
 
     def test_mark_and_check_use_same_key(self, cache, mock_redis):
-        cache.mark_seen("espn", "article42")
+        cache.mark_processed("espn", "article42")
         cache.exists("espn", "article42")
 
         expected_key = f"{_KEY_PREFIX}:espn:article42"
@@ -68,19 +68,19 @@ class TestRedisDedupCacheKeyFormat:
         mock_redis.exists.assert_called_once_with(expected_key)
 
 
-class TestGetDedupCache:
+class TestGetProcessedCache:
     def test_returns_cache_on_success(self):
-        with patch("src.services.content_poller.redis_dedup_cache.Logger"), \
-             patch("src.services.content_poller.redis_dedup_cache.get_config_service") as mock_config, \
-             patch("src.services.content_poller.redis_dedup_cache.redis.Redis"):
+        with patch("src.services.content_poller.redis_processed_cache.Logger"), \
+             patch("src.services.content_poller.redis_processed_cache.get_config_service") as mock_config, \
+             patch("src.services.content_poller.redis_processed_cache.redis.Redis"):
             mock_config.return_value.get.side_effect = lambda key: {"redis.host": "localhost", "redis.port": "6379"}[key]
 
-            result = get_dedup_cache()
-            assert isinstance(result, RedisDedupCache)
+            result = get_processed_cache()
+            assert isinstance(result, RedisProcessedCache)
 
     def test_returns_none_on_failure(self):
-        with patch("src.services.content_poller.redis_dedup_cache.Logger"), \
-             patch("src.services.content_poller.redis_dedup_cache.get_config_service", side_effect=Exception("no config")):
+        with patch("src.services.content_poller.redis_processed_cache.Logger"), \
+             patch("src.services.content_poller.redis_processed_cache.get_config_service", side_effect=Exception("no config")):
 
-            result = get_dedup_cache()
+            result = get_processed_cache()
             assert result is None

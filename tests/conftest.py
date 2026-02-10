@@ -6,7 +6,7 @@ import pytest
 
 from src.shared.interfaces.repositories.article_repository import ArticleRepository
 from src.shared.interfaces.content_source import ContentSource
-from src.shared.interfaces.dedup_cache import DedupCache
+from src.shared.interfaces.processed_cache import ProcessedCache
 from src.shared.interfaces.inference.inference_provider import InferenceProvider
 from src.shared.objects.inference.inference_result import InferenceResult
 from src.shared.interfaces.messaging.message_publisher import MessagePublisher
@@ -28,12 +28,12 @@ def mock_logger():
         "src.services.content_processor.content_analyzer.Logger",
         "src.services.query_engine.query_engine_orchestrator.Logger",
         "src.services.gateway.request_submission_service.Logger",
-        "src.services.content_poller.poller.Logger",
-        "src.services.content_poller.content_ingester.Logger",
+        "src.services.content_poller.content_poller.Logger",
+        "src.services.content_poller.content_processor.Logger",
         "src.services.content_poller.content_sources.rss_content_source.Logger",
         "src.services.content_poller.content_sources.reddit_content_source.Logger",
         "src.services.content_poller.content_sources.content_source_factory.Logger",
-        "src.services.content_poller.redis_dedup_cache.Logger",
+        "src.services.content_poller.redis_processed_cache.Logger",
     ]
     patches = []
     for target in patch_targets:
@@ -140,10 +140,10 @@ def mock_message_publisher():
 
 
 @pytest.fixture
-def mock_dedup_cache():
-    mock = MagicMock(spec=DedupCache)
+def mock_processed_cache():
+    mock = MagicMock(spec=ProcessedCache)
     mock.exists.return_value = False
-    mock.mark_seen.return_value = None
+    mock.mark_processed.return_value = None
     return mock
 
 

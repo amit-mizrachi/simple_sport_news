@@ -1,4 +1,4 @@
-"""Tests for ContentPoller and ContentSourceFactory."""
+"""Tests for ContentPoller, ContentProcessor, and ContentSourceFactory."""
 import asyncio
 from concurrent.futures import Future
 from datetime import datetime, timezone
@@ -8,6 +8,7 @@ import pytest
 
 from src.shared.objects.content.raw_article import RawArticle
 from src.services.content_poller.content_poller import ContentPoller
+from src.services.content_poller.content_processor import ContentProcessor
 from src.services.content_poller.content_sources.content_source_factory import build_content_sources
 from src.services.content_poller.content_sources.rss_content_source import RSSContentSource
 
@@ -51,59 +52,35 @@ def _make_span_context_factory():
 
 
 @pytest.fixture
-def poller(mock_content_source, mock_content_repository, mock_message_publisher, mock_dedup_cache):
-    with patch("src.services.content_poller.poller.Spanner") as mock_spanner_cls, \
-         patch("src.services.content_poller.poller.SpanContextFactory", _make_span_context_factory()), \
-         patch("src.services.content_poller.poller.ContextPreservingThreadPool", return_value=_make_thread_pool()):
-        mock_spanner_cls.return_value.inject_telemetry_context.return_value = {}
+def mock_processor():
+    return MagicMock(spec=ContentProcessor)
+
+
+@pytest.fixture
+def poller(mock_content_source, mock_processor):
+    with patch("src.services.content_poller.content_poller.SpanContextFactory", _make_span_context_factory()), \
+         patch("src.services.content_poller.content_poller.ContextPreservingThreadPool", return_value=_make_thread_pool()):
 
         yield ContentPoller(
             sources=[mock_content_source],
-            content_repository=mock_content_repository,
-            message_publisher=mock_message_publisher,
-            dedup_cache=mock_dedup_cache,
+            processor=mock_processor,
         )
 
 
 class TestContentPoller:
     def test_poll_cycle_fetches_and_publishes(
-        self, poller, mock_content_source, mock_message_publisher, mock_dedup_cache
+        self, poller, mock_content_source, mock_processor
     ):
         items = [_make_article(source_id="a1"), _make_article(source_id="a2")]
         mock_content_source.fetch_latest.return_value = items
-        mock_dedup_cache.exists.return_value = False
 
         asyncio.get_event_loop().run_until_complete(poller._poll_cycle())
 
-        assert mock_message_publisher.publish.call_count == 2
-        assert mock_dedup_cache.mark_seen.call_count == 2
+        assert mock_processor.process.call_count == 2
+        mock_processor.process.assert_any_call(items[0])
+        mock_processor.process.assert_any_call(items[1])
 
-    def test_poll_cycle_skips_duplicates(
-        self, poller, mock_content_source, mock_message_publisher, mock_dedup_cache
-    ):
-        items = [_make_article(source_id="dup1")]
-        mock_content_source.fetch_latest.return_value = items
-        mock_dedup_cache.exists.return_value = True
-
-        asyncio.get_event_loop().run_until_complete(poller._poll_cycle())
-
-        mock_message_publisher.publish.assert_not_called()
-
-    def test_poll_cycle_falls_back_to_mongo_dedup(
-        self, poller, mock_content_source, mock_content_repository, mock_message_publisher, mock_dedup_cache
-    ):
-        items = [_make_article(source_id="mongo_dup")]
-        mock_content_source.fetch_latest.return_value = items
-        mock_dedup_cache.exists.return_value = False
-        mock_content_repository.article_exists.return_value = True
-
-        asyncio.get_event_loop().run_until_complete(poller._poll_cycle())
-
-        mock_message_publisher.publish.assert_not_called()
-
-    def test_poll_cycle_handles_source_fetch_error(
-        self, mock_content_repository, mock_message_publisher, mock_dedup_cache
-    ):
+    def test_poll_cycle_handles_source_fetch_error(self, mock_processor):
         source_ok = MagicMock()
         source_ok.get_source_name.return_value = "ok_source"
         source_ok.fetch_latest.return_value = [_make_article(source_id="ok1")]
@@ -112,48 +89,89 @@ class TestContentPoller:
         source_bad.get_source_name.return_value = "bad_source"
         source_bad.fetch_latest.side_effect = ConnectionError("network down")
 
-        with patch("src.services.content_poller.poller.Spanner") as mock_spanner_cls, \
-             patch("src.services.content_poller.poller.SpanContextFactory", _make_span_context_factory()), \
-             patch("src.services.content_poller.poller.ContextPreservingThreadPool", return_value=_make_thread_pool()):
-            mock_spanner_cls.return_value.inject_telemetry_context.return_value = {}
+        with patch("src.services.content_poller.content_poller.SpanContextFactory", _make_span_context_factory()), \
+             patch("src.services.content_poller.content_poller.ContextPreservingThreadPool", return_value=_make_thread_pool()):
 
             p = ContentPoller(
                 sources=[source_bad, source_ok],
-                content_repository=mock_content_repository,
-                message_publisher=mock_message_publisher,
-                dedup_cache=mock_dedup_cache,
+                processor=mock_processor,
             )
 
             asyncio.get_event_loop().run_until_complete(p._poll_cycle())
 
-        mock_message_publisher.publish.assert_called_once()
+        mock_processor.process.assert_called_once()
 
     def test_poll_cycle_handles_item_processing_error(
-        self, poller, mock_content_source, mock_message_publisher, mock_dedup_cache
+        self, poller, mock_content_source, mock_processor
     ):
         items = [_make_article(source_id="err1"), _make_article(source_id="ok1")]
         mock_content_source.fetch_latest.return_value = items
-        mock_dedup_cache.exists.return_value = False
 
         call_count = 0
 
-        def publish_side_effect(*args, **kwargs):
+        def process_side_effect(item):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise RuntimeError("publish failed")
+                raise RuntimeError("process failed")
 
-        mock_message_publisher.publish.side_effect = publish_side_effect
+        mock_processor.process.side_effect = process_side_effect
 
         asyncio.get_event_loop().run_until_complete(poller._poll_cycle())
 
-        # Second item should still be processed (publish called twice total)
-        assert mock_message_publisher.publish.call_count == 2
+        assert mock_processor.process.call_count == 2
 
     def test_stop_sets_running_false(self, poller):
         assert poller._running is True
         poller.stop()
         assert poller._running is False
+
+
+class TestContentProcessor:
+    @pytest.fixture
+    def processor(self, mock_content_repository, mock_message_publisher, mock_processed_cache):
+        with patch("src.services.content_poller.content_processor.Spanner") as mock_spanner_cls, \
+             patch("src.services.content_poller.content_processor.SpanContextFactory", _make_span_context_factory()):
+            mock_spanner_cls.return_value.inject_telemetry_context.return_value = {}
+
+            yield ContentProcessor(
+                content_repository=mock_content_repository,
+                message_publisher=mock_message_publisher,
+                content_topic="content-raw",
+                processed_cache=mock_processed_cache,
+            )
+
+    def test_process_publishes_new_article(
+        self, processor, mock_message_publisher, mock_processed_cache
+    ):
+        mock_processed_cache.exists.return_value = False
+        item = _make_article(source_id="new1")
+
+        processor.process(item)
+
+        mock_message_publisher.publish.assert_called_once()
+        mock_processed_cache.mark_processed.assert_called_once_with("reddit", "new1")
+
+    def test_process_skips_duplicate_from_cache(
+        self, processor, mock_message_publisher, mock_processed_cache
+    ):
+        mock_processed_cache.exists.return_value = True
+        item = _make_article(source_id="dup1")
+
+        processor.process(item)
+
+        mock_message_publisher.publish.assert_not_called()
+
+    def test_process_falls_back_to_mongo(
+        self, processor, mock_content_repository, mock_message_publisher, mock_processed_cache
+    ):
+        mock_processed_cache.exists.return_value = False
+        mock_content_repository.article_exists.return_value = True
+        item = _make_article(source_id="mongo_dup")
+
+        processor.process(item)
+
+        mock_message_publisher.publish.assert_not_called()
 
 
 class TestContentSourceFactory:
