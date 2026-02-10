@@ -6,6 +6,10 @@ import praw
 
 from src.shared.interfaces.content_source import ContentSource
 from src.shared.objects.content.raw_article import RawArticle
+from src.shared.observability.logs.logger import Logger
+
+DEFAULT_SUBREDDITS = ["soccer", "nba", "nfl", "formula1"]
+_FETCH_LIMIT = 25
 
 
 class RedditContentSource(ContentSource):
@@ -14,21 +18,22 @@ class RedditContentSource(ContentSource):
         client_id: str,
         client_secret: str,
         user_agent: str,
-        subreddits: List[str] = None,
+        subreddits: Optional[List[str]] = None,
     ):
         self._reddit = praw.Reddit(
             client_id=client_id,
             client_secret=client_secret,
             user_agent=user_agent,
         )
-        self._subreddits = subreddits or ["soccer", "nba", "nfl", "formula1"]
+        self._subreddits = subreddits or DEFAULT_SUBREDDITS
+        self._logger = Logger()
 
     def fetch_latest(self, since: Optional[datetime] = None) -> List[RawArticle]:
         results: List[RawArticle] = []
         for sub_name in self._subreddits:
             try:
                 subreddit = self._reddit.subreddit(sub_name)
-                for submission in subreddit.hot(limit=25):
+                for submission in subreddit.hot(limit=_FETCH_LIMIT):
                     created = datetime.fromtimestamp(submission.created_utc, tz=timezone.utc)
                     if since and created <= since:
                         continue
@@ -48,7 +53,8 @@ class RedditContentSource(ContentSource):
                             "author": str(submission.author),
                         }
                     ))
-            except Exception:
+            except Exception as e:
+                self._logger.warning(f"Failed to fetch subreddit r/{sub_name}: {e}")
                 continue
 
         return results

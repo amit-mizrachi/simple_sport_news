@@ -6,6 +6,7 @@ from typing import List, Optional
 
 from src.shared.interfaces.repositories.article_repository import ArticleRepository
 from src.shared.interfaces.content_source import ContentSource
+from src.shared.objects.content.raw_article import RawArticle
 from src.shared.interfaces.messaging.message_publisher import MessagePublisher
 from src.shared.objects.messages.content_message import ContentMessage
 from src.shared.interfaces.dedup_cache import DedupCache
@@ -68,27 +69,31 @@ class ContentPoller:
 
                 for item in result:
                     try:
-                        if self._is_duplicate(item.source, item.source_id):
-                            continue
-
-                        telemetry_headers = self._spanner.inject_telemetry_context({})
-
-                        message = ContentMessage(
-                            request_id=str(uuid.uuid4()),
-                            raw_content=item,
-                            telemetry_headers=telemetry_headers,
-                        )
-                        with SpanContextFactory.producer(self._content_topic):
-                            self._message_publisher.publish(
-                                self._content_topic, message.model_dump_json()
-                            )
-
-                        if self._dedup_cache:
-                            self._dedup_cache.mark_seen(item.source, item.source_id)
+                        self._process_item(item)
                     except Exception as e:
                         self._logger.error(f"Error processing item from {source.get_source_name()}: {e}")
 
             self._last_poll = datetime.now(tz=timezone.utc)
+
+    def _process_item(self, item: RawArticle) -> None:
+        """Dedup-check, build message, publish, and mark as seen."""
+        if self._is_duplicate(item.source, item.source_id):
+            return
+
+        telemetry_headers = self._spanner.inject_telemetry_context({})
+
+        message = ContentMessage(
+            request_id=str(uuid.uuid4()),
+            raw_content=item,
+            telemetry_headers=telemetry_headers,
+        )
+        with SpanContextFactory.producer(self._content_topic):
+            self._message_publisher.publish(
+                self._content_topic, message.model_dump_json()
+            )
+
+        if self._dedup_cache:
+            self._dedup_cache.mark_seen(item.source, item.source_id)
 
     def _fetch_source(self, source: ContentSource):
         """Fetch latest items from a single source. Runs in a worker thread."""

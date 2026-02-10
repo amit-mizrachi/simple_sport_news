@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.shared.interfaces.repositories.article_repository import ArticleRepository
+from src.shared.interfaces.content_source import ContentSource
+from src.shared.interfaces.dedup_cache import DedupCache
 from src.shared.interfaces.inference.inference_provider import InferenceProvider
 from src.shared.objects.inference.inference_result import InferenceResult
 from src.shared.interfaces.messaging.message_publisher import MessagePublisher
@@ -26,6 +28,11 @@ def mock_logger():
         patch("src.services.content_processor.content_processor_orchestrator.Logger", return_value=mock_instance),
         patch("src.services.query_engine.query_engine_orchestrator.Logger", return_value=mock_instance),
         patch("src.services.gateway.request_submission_service.Logger", return_value=mock_instance),
+        patch("src.services.content_poller.poller.Logger", return_value=mock_instance),
+        patch("src.services.content_poller.content_sources.rss_content_source.Logger", return_value=mock_instance),
+        patch("src.services.content_poller.content_sources.reddit_content_source.Logger", return_value=mock_instance),
+        patch("src.services.content_poller.content_sources.content_source_factory.Logger", return_value=mock_instance),
+        patch("src.services.content_poller.redis_dedup_cache.Logger", return_value=mock_instance),
     ]
     for p in patches:
         p.start()
@@ -122,6 +129,22 @@ def mock_content_repository():
 def mock_message_publisher():
     mock = MagicMock(spec=MessagePublisher)
     mock.publish.return_value = True
+    return mock
+
+
+@pytest.fixture
+def mock_dedup_cache():
+    mock = MagicMock(spec=DedupCache)
+    mock.exists.return_value = False
+    mock.mark_seen.return_value = None
+    return mock
+
+
+@pytest.fixture
+def mock_content_source():
+    mock = MagicMock(spec=ContentSource)
+    mock.get_source_name.return_value = "test_source"
+    mock.fetch_latest.return_value = []
     return mock
 
 

@@ -13,16 +13,17 @@ _TTL_SECONDS = 3600
 
 class RedisDedupCache(DedupCache):
 
-    def __init__(self):
+    def __init__(self, host: str, port: int):
         self._logger = Logger()
-        config = get_config_service()
-        host = config.get("redis.host")
-        port = config.get("redis.port")
         self._client = redis.Redis(host=host, port=port, decode_responses=True)
+
+    @staticmethod
+    def _make_key(source: str, source_id: str) -> str:
+        return f"{_KEY_PREFIX}:{source}:{source_id}"
 
     def exists(self, source: str, source_id: str) -> bool:
         """Check if an article has already been seen."""
-        key = f"{_KEY_PREFIX}:{source}:{source_id}"
+        key = self._make_key(source, source_id)
         try:
             return self._client.exists(key) == 1
         except Exception as e:
@@ -31,7 +32,7 @@ class RedisDedupCache(DedupCache):
 
     def mark_seen(self, source: str, source_id: str) -> None:
         """Mark an article as seen with a 1-hour TTL."""
-        key = f"{_KEY_PREFIX}:{source}:{source_id}"
+        key = self._make_key(source, source_id)
         try:
             self._client.set(key, 1, ex=_TTL_SECONDS)
         except Exception as e:
@@ -41,7 +42,10 @@ class RedisDedupCache(DedupCache):
 def get_dedup_cache() -> Optional[DedupCache]:
     """Create a Redis dedup cache, falling back to None if unavailable."""
     try:
-        return RedisDedupCache()
+        config = get_config_service()
+        host = config.get("redis.host")
+        port = int(config.get("redis.port"))
+        return RedisDedupCache(host=host, port=port)
     except Exception as e:
         Logger().warning(f"Dedup cache not available, falling back to MongoDB-only: {e}")
         return None

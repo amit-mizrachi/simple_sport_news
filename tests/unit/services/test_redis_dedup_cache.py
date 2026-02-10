@@ -14,10 +14,8 @@ def mock_redis():
 @pytest.fixture
 def cache(mock_redis):
     with patch("src.services.content_poller.redis_dedup_cache.Logger"), \
-         patch("src.services.content_poller.redis_dedup_cache.get_config_service") as mock_config, \
          patch("src.services.content_poller.redis_dedup_cache.redis.Redis", return_value=mock_redis):
-        mock_config.return_value.get.side_effect = lambda key: {"redis.host": "localhost", "redis.port": "6379"}[key]
-        yield RedisDedupCache()
+        yield RedisDedupCache(host="localhost", port=6379)
 
 
 class TestRedisDedupCacheExists:
