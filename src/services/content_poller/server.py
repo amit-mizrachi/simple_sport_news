@@ -4,8 +4,8 @@ import signal
 
 from src.services.content_poller.dedup_cache import DeduplicationCache
 from src.services.content_poller.poller import ContentPoller
-from src.services.content_poller.sources.reddit_content_source import RedditContentSource
-from src.services.content_poller.sources.rss_content_source import RSSContentSource
+from src.services.content_poller.content_sources.reddit_content_source import RedditContentSource
+from src.services.content_poller.content_sources.rss_content_source import RSSContentSource
 from src.shared.observability.logs.logger import Logger
 from src.shared.observability.traces.tracer import Tracer
 from src.shared.messaging.messaging_factory import get_message_publisher

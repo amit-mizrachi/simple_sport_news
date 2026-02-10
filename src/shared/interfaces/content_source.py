@@ -1,4 +1,4 @@
-"""Content Source Interface - defines the contract for content ingestion sources."""
+"""Content Source Interface - defines the contract for content ingestion content_sources."""
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import List, Optional

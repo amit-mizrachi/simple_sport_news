@@ -32,7 +32,7 @@ Query: {query}
 Return ONLY valid JSON, no markdown."""
 
 SYNTHESIS_PROMPT = """Based on the following sports articles, answer the user's question.
-Be concise, factual, and cite your sources by mentioning the article titles.
+Be concise, factual, and cite your content_sources by mentioning the article titles.
 
 User question: {query}
 

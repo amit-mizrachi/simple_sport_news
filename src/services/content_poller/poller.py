@@ -1,4 +1,4 @@
-"""Content Poller - periodically fetches content from configured sources."""
+"""Content Poller - periodically fetches content from configured content_sources."""
 import asyncio
 import uuid
 from datetime import datetime, timezone
@@ -12,11 +12,10 @@ from src.services.content_poller.dedup_cache import DeduplicationCache
 from src.shared.observability.logs.logger import Logger
 from src.shared.observability.traces.spans.span_context_factory import SpanContextFactory
 from src.shared.observability.traces.spans.spanner import Spanner
+from src.shared.messaging.context_preserving_thread_pool import ContextPreservingThreadPool
 
 
 class ContentPoller:
-    """Polls content sources and publishes new content to Kafka."""
-
     def __init__(
         self,
         sources: List[ContentSource],
@@ -34,6 +33,7 @@ class ContentPoller:
         self._content_topic = content_topic
         self._poll_interval = poll_interval
         self._dedup_cache = dedup_cache
+        self._thread_pool = ContextPreservingThreadPool(max_workers=len(sources))
         self._running = True
         self._last_poll: datetime = datetime.now(tz=timezone.utc)
 
@@ -49,13 +49,25 @@ class ContentPoller:
 
     async def _poll_cycle(self):
         with SpanContextFactory.internal("content_poller", "poll_cycle"):
-            for source in self._sources:
-                try:
-                    with SpanContextFactory.client("HTTP", source, "content_poller", "fetch_latest"):
-                        items = source.fetch_latest(since=self._last_poll)
-                    self._logger.info(f"Fetched {len(items)} items from {source.get_source_name()}")
+            loop = asyncio.get_running_loop()
 
-                    for item in items:
+            # Phase 1: Fetch all sources in parallel via thread pool
+            fetch_futures = [
+                loop.run_in_executor(self._thread_pool, self._fetch_source, source)
+                for source in self._sources
+            ]
+            results = await asyncio.gather(*fetch_futures, return_exceptions=True)
+
+            # Phase 2: Process items sequentially (dedup -> build -> publish -> mark)
+            for source, result in zip(self._sources, results):
+                if isinstance(result, Exception):
+                    self._logger.error(f"Error fetching from {source.get_source_name()}: {result}")
+                    continue
+
+                self._logger.info(f"Fetched {len(result)} items from {source.get_source_name()}")
+
+                for item in result:
+                    try:
                         if self._is_duplicate(item.source, item.source_id):
                             continue
 
@@ -73,10 +85,15 @@ class ContentPoller:
 
                         if self._dedup_cache:
                             self._dedup_cache.mark_seen(item.source, item.source_id)
-                except Exception as e:
-                    self._logger.error(f"Error polling {source.get_source_name()}: {e}")
+                    except Exception as e:
+                        self._logger.error(f"Error processing item from {source.get_source_name()}: {e}")
 
             self._last_poll = datetime.now(tz=timezone.utc)
+
+    def _fetch_source(self, source: ContentSource):
+        """Fetch latest items from a single source. Runs in a worker thread."""
+        with SpanContextFactory.client("HTTP", source, "content_poller", "fetch_latest"):
+            return source.fetch_latest(since=self._last_poll)
 
     def _is_duplicate(self, source: str, source_id: str) -> bool:
         """Check dedup cache first (Redis Set, sub-ms), fall back to MongoDB."""
@@ -89,3 +106,4 @@ class ContentPoller:
 
     def stop(self):
         self._running = False
+        self._thread_pool.shutdown(wait=False)

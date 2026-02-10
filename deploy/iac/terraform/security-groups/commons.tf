@@ -1,6 +1,6 @@
 # ========================================================================
 # SECURITY GROUPS MODULE - COMMONS
-# Shared locals and data sources for security groups
+# Shared locals and data content_sources for security groups
 # ========================================================================
 
 locals {

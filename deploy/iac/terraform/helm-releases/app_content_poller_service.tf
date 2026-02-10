@@ -1,6 +1,6 @@
 # ========================================================================
 # APPLICATION - CONTENT POLLER SERVICE
-# Polls content sources and publishes to processing pipeline
+# Polls content content_sources and publishes to processing pipeline
 # ========================================================================
 
 resource "helm_release" "content_poller_service_release" {
