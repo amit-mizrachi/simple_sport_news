@@ -1,4 +1,6 @@
 """Redis Set-based deduplication cache for fast article existence checks."""
+from typing import Optional
+
 import redis
 
 from src.shared.appconfig_client import get_config_service
@@ -32,3 +34,12 @@ class RedisDedupCache(DedupCache):
             self._client.sadd(self._SET_KEY, member)
         except Exception as e:
             self._logger.warning(f"Failed to mark article in dedup cache: {e}")
+
+
+def get_dedup_cache() -> Optional[DedupCache]:
+    """Create a Redis dedup cache, falling back to None if unavailable."""
+    try:
+        return RedisDedupCache()
+    except Exception as e:
+        Logger().warning(f"Dedup cache not available, falling back to MongoDB-only: {e}")
+        return None
